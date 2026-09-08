@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { getPlanRows, upsertPlanRow } from '../lib/planningSheet'
+import { getPlanRows, upsertPlanRow } from '../lib/store'
 import { logActivity } from '../hooks/useActivityFeed'
 import { getMonthWeeks, isInMonth, isoWeekNumber, weekdayLabel } from '../lib/dateUtils'
 import type { Brand, Country, PlanRow } from '../types'
@@ -10,17 +10,16 @@ const CHANNELS = ['TV', 'Digital', 'Radio', 'Otro']
 
 interface Props {
   monthKey: string
-  spreadsheetId: string
   brand: Brand
   country: Country
 }
 
-export function CalendarGrid({ monthKey, spreadsheetId, brand, country }: Props) {
+export function CalendarGrid({ monthKey, brand, country }: Props) {
   const { user } = useAuth()
   const queryClient = useQueryClient()
   const [channel, setChannel] = useState(CHANNELS[0])
 
-  const planQuery = useQuery({ queryKey: ['plan', monthKey], queryFn: () => getPlanRows(spreadsheetId) })
+  const planQuery = useQuery({ queryKey: ['plan', monthKey], queryFn: () => getPlanRows(monthKey) })
 
   const saveMutation = useMutation({
     mutationFn: async ({ date, spend }: { date: string; spend: number }) => {
@@ -34,7 +33,7 @@ export function CalendarGrid({ monthKey, spreadsheetId, brand, country }: Props)
         last_edited_by: user?.email ?? '',
         last_edited_at: new Date().toISOString(),
       }
-      await upsertPlanRow(spreadsheetId, row)
+      await upsertPlanRow(monthKey, row)
       await logActivity(monthKey, {
         type: 'plan_cell',
         sheetTab: 'Plan',

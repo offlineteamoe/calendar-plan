@@ -1,12 +1,14 @@
-// Firebase se usa ÚNICAMENTE para la capa de tiempo real (presencia + feed de
-// actividad, ver src/hooks/usePresence.ts y useActivityFeed.ts). Los datos del
-// plan (Plan/Escenario/Nota/etc.) viven en Google Sheets, no acá — ver
-// src/lib/sheetsApi.ts.
+// Firebase es la única infraestructura de esta app: Authentication (login con
+// Google, restringido a Workspace) y Firestore (todos los datos del plan +
+// presencia/actividad en tiempo real). Sin Google Sheets, sin Drive API, sin
+// backend propio.
 //
-// Importante: el control de dominio real para esta capa vive en las reglas de
-// seguridad de Firestore (firestore.rules), no en este archivo. El parámetro
-// `hd` de abajo solo preselecciona el dominio en el selector de cuentas de
-// Google — es una comodidad de UX, no una barrera de seguridad.
+// El control de dominio real vive en dos lugares que este archivo no
+// controla: el OAuth consent screen "Internal" del proyecto de Google Cloud
+// detrás de este proyecto de Firebase (una cuenta fuera del Workspace no
+// puede ni completar el login), y las reglas de seguridad de Firestore
+// (firestore.rules). El parámetro `hd` de abajo es solo una comodidad de UX
+// (preselecciona el dominio en el selector de cuentas de Google).
 
 import { initializeApp, type FirebaseApp } from 'firebase/app'
 import {
@@ -50,15 +52,11 @@ export function getDb(): Firestore {
 }
 
 /**
- * Segundo paso del login (después de googleAuth.signInInteractive()). Es un
- * popup aparte y deliberadamente simple: como el usuario ya eligió/confirmó
- * su cuenta de Google en el primer paso, este suele resolverse muy rápido.
- * Mantenemos los dos flujos separados porque cada uno tiene su propia forma
- * de renovarse sola (Firebase renueva su sesión internamente; el token de
- * Drive/Sheets se renueva en silencio vía googleAuth.ts) — mezclarlos en un
- * solo mecanismo perdería la renovación silenciosa ya probada en producción.
+ * Único paso de login. Firebase persiste la sesión solo (IndexedDB) y la
+ * restaura sola en la próxima visita — no hace falta lógica de renovación
+ * como con un token OAuth de vida corta.
  */
-export async function signInWithGoogleFirebase(): Promise<User> {
+export async function signInWithGoogle(): Promise<User> {
   const provider = new GoogleAuthProvider()
   provider.setCustomParameters({ hd: config.allowedDomain })
   const result = await signInWithPopup(getFirebaseAuth(), provider)
@@ -76,4 +74,8 @@ export function onAuthStateChanged(cb: (user: User | null) => void) {
 export function isAllowedDomainEmail(email: string | null | undefined): boolean {
   if (!email) return false
   return email.toLowerCase().endsWith('@' + config.allowedDomain.toLowerCase())
+}
+
+export function getAllowedDomain(): string {
+  return config.allowedDomain
 }

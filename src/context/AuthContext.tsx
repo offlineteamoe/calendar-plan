@@ -1,13 +1,11 @@
-// Une los dos pasos de login (ver plan, sección 2: "Autenticación — un solo
-// clic") detrás de una sola función signIn(): primero el token de Google
-// para Drive/Sheets, después la sesión de Firebase para Firestore. Expone un
-// único estado de auth al resto de la app.
+// Login en un solo paso: signInWithGoogle() abre el popup de Firebase Auth
+// (Google), y onAuthStateChanged nos entera del resultado — incluida la
+// restauración automática de sesión en visitas siguientes, sin lógica propia.
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
 import type { User } from 'firebase/auth'
 import { isConfigured } from '../config'
-import { getAllowedDomain, signInInteractive, signOutGoogle, tryResumeSession } from '../lib/googleAuth'
-import { isAllowedDomainEmail, onAuthStateChanged, signInWithGoogleFirebase, signOutFirebase } from '../lib/firebaseClient'
+import { getAllowedDomain, isAllowedDomainEmail, onAuthStateChanged, signInWithGoogle, signOutFirebase } from '../lib/firebaseClient'
 
 export interface CurrentUser {
   uid: string
@@ -48,21 +46,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    // Sin config de Firebase/Google, ni siquiera intentamos inicializar el
-    // SDK: initializeApp/getAuth con una API key vacía o inválida lanza de
-    // forma síncrona y tumbaría toda la app antes de poder mostrar el aviso
-    // de "falta configuración" de LoginPage.
+    // Sin config de Firebase, ni siquiera intentamos inicializar el SDK:
+    // getAuth con una API key vacía/inválida lanza de forma síncrona y
+    // tumbaría toda la app antes de poder mostrar el aviso de "falta
+    // configuración" de LoginPage.
     if (!isConfigured()) {
       setStatus('signed-out')
       return
     }
 
-    // Al cargar la app, intentamos recuperar sesión sin mostrar UI. Si el
-    // usuario ya tenía sesión de Firebase, onAuthStateChanged nos lo dice
-    // directamente sin necesidad de otro popup.
     const unsubscribe = onAuthStateChanged((firebaseUser) => {
       if (!firebaseUser) {
-        setStatus((prev) => (prev === 'loading' ? 'signed-out' : prev))
+        setStatus('signed-out')
         return
       }
       const current = toCurrentUser(firebaseUser)
@@ -75,8 +70,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setStatus('signed-in')
     })
 
-    void tryResumeSession()
-
     return unsubscribe
   }, [])
 
@@ -88,8 +81,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setError(null)
     setStatus('loading')
     try {
-      await signInInteractive() // 1) token de Drive/Sheets
-      await signInWithGoogleFirebase() // 2) sesión de Firestore (dispara onAuthStateChanged)
+      await signInWithGoogle()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'No se pudo iniciar sesión con Google.')
       setStatus('error')
@@ -97,7 +89,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const signOut = useCallback(async () => {
-    signOutGoogle()
     await signOutFirebase()
     setUser(null)
     setStatus('signed-out')

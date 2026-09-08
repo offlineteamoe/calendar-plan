@@ -1,8 +1,8 @@
 import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { createMonth, listMonths } from '../lib/planningSheet'
+import { createMonth, listMonths } from '../lib/store'
 import { useAuth } from '../context/AuthContext'
-import type { MonthIndexEntry } from '../types'
+import type { MonthEntry } from '../types'
 
 function formatMonthLabel(monthKey: string): string {
   const [year, month] = monthKey.split('-').map(Number)
@@ -11,7 +11,7 @@ function formatMonthLabel(monthKey: string): string {
   return label.charAt(0).toUpperCase() + label.slice(1)
 }
 
-export function MonthSelectorPage({ onOpenMonth }: { onOpenMonth: (entry: MonthIndexEntry) => void }) {
+export function MonthSelectorPage({ onOpenMonth }: { onOpenMonth: (entry: MonthEntry) => void }) {
   const { user, signOut } = useAuth()
   const queryClient = useQueryClient()
   const [newMonthKey, setNewMonthKey] = useState(() => new Date().toISOString().slice(0, 7))
@@ -41,7 +41,7 @@ export function MonthSelectorPage({ onOpenMonth }: { onOpenMonth: (entry: MonthI
       </header>
 
       {monthsQuery.isLoading && <p>Cargando meses…</p>}
-      {monthsQuery.isError && <p className="error-text">No se pudo leer el Sheet Index. Revisa la configuración.</p>}
+      {monthsQuery.isError && <p className="error-text">No se pudo leer la lista de meses. Revisa la configuración.</p>}
 
       <ul className="month-list">
         {monthsQuery.data?.map((m) => (

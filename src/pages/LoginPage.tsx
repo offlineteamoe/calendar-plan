@@ -1,5 +1,5 @@
 import { useAuth } from '../context/AuthContext'
-import { getAllowedDomain } from '../lib/googleAuth'
+import { getAllowedDomain } from '../lib/firebaseClient'
 import { missingConfigKeys } from '../config'
 
 export function LoginPage() {

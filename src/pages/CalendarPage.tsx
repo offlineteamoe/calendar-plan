@@ -6,10 +6,10 @@ import { PresenceBar } from '../components/PresenceBar'
 import { ActivityToast } from '../components/ActivityToast'
 import { CalendarGrid } from '../components/CalendarGrid'
 import { SidePanel } from '../components/SidePanel'
-import { BRANDS, COUNTRIES, COUNTRY_LABELS, type Brand, type Country, type MonthIndexEntry } from '../types'
+import { BRANDS, COUNTRIES, COUNTRY_LABELS, type Brand, type Country, type MonthEntry } from '../types'
 
 interface Props {
-  month: MonthIndexEntry
+  month: MonthEntry
   onBack: () => void
 }
 
@@ -64,8 +64,8 @@ export function CalendarPage({ month, onBack }: Props) {
       </div>
 
       <div className="calendar-page-body">
-        <CalendarGrid monthKey={month.month_key} spreadsheetId={month.spreadsheet_id} brand={brand} country={country} />
-        <SidePanel monthKey={month.month_key} spreadsheetId={month.spreadsheet_id} brand={brand} country={country} />
+        <CalendarGrid monthKey={month.month_key} brand={brand} country={country} />
+        <SidePanel monthKey={month.month_key} brand={brand} country={country} />
       </div>
 
       <ActivityToast events={activityEvents} myEmail={user?.email ?? ''} />

@@ -3,11 +3,11 @@ import { useAuth } from './context/AuthContext'
 import { LoginPage } from './pages/LoginPage'
 import { MonthSelectorPage } from './pages/MonthSelectorPage'
 import { CalendarPage } from './pages/CalendarPage'
-import type { MonthIndexEntry } from './types'
+import type { MonthEntry } from './types'
 
 export default function App() {
   const { status } = useAuth()
-  const [openMonth, setOpenMonth] = useState<MonthIndexEntry | null>(null)
+  const [openMonth, setOpenMonth] = useState<MonthEntry | null>(null)
 
   if (status === 'loading') {
     return (

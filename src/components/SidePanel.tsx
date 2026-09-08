@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { getPlanRows } from '../lib/planningSheet'
+import { getPlanRows } from '../lib/store'
 import { NotesTab } from './NotesTab'
 import { ScenarioEditor } from './ScenarioEditor'
 import type { Brand, Country } from '../types'
@@ -18,7 +18,6 @@ const TABS: { key: TabKey; label: string }[] = [
 
 interface Props {
   monthKey: string
-  spreadsheetId: string
   brand: Brand
   country: Country
 }
@@ -27,9 +26,9 @@ function EmptyPhase2({ label }: { label: string }) {
   return <p className="muted">{label} todavía no tiene datos — llega en la fase 2, cuando se conecte el gasto real.</p>
 }
 
-export function SidePanel({ monthKey, spreadsheetId, brand, country }: Props) {
+export function SidePanel({ monthKey, brand, country }: Props) {
   const [tab, setTab] = useState<TabKey>('resumen')
-  const planQuery = useQuery({ queryKey: ['plan', monthKey], queryFn: () => getPlanRows(spreadsheetId) })
+  const planQuery = useQuery({ queryKey: ['plan', monthKey], queryFn: () => getPlanRows(monthKey) })
 
   const totalForSelection = (planQuery.data ?? [])
     .filter((r) => r.brand === brand && r.country === country)
@@ -56,7 +55,7 @@ export function SidePanel({ monthKey, spreadsheetId, brand, country }: Props) {
               <span className="summary-value">${totalForSelection.toLocaleString()}</span>
               <span className="muted small">planificado este mes (todos los canales)</span>
             </div>
-            <ScenarioEditor monthKey={monthKey} spreadsheetId={spreadsheetId} brand={brand} />
+            <ScenarioEditor monthKey={monthKey} brand={brand} />
           </div>
         )}
         {tab === 'spend' && (
@@ -75,7 +74,7 @@ export function SidePanel({ monthKey, spreadsheetId, brand, country }: Props) {
             })}
           </div>
         )}
-        {tab === 'notes' && <NotesTab monthKey={monthKey} spreadsheetId={spreadsheetId} />}
+        {tab === 'notes' && <NotesTab monthKey={monthKey} />}
         {tab === 'results' && (
           <div className="tab-content">
             <h3>Results</h3>

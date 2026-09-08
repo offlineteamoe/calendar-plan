@@ -99,87 +99,23 @@ export interface CreativeRow {
   notes: string
 }
 
-export interface MetaEntry {
-  key: string
-  value: string
-}
-
-/** Fila del Sheet "Index" raíz: mapea mes -> spreadsheet. */
-export interface MonthIndexEntry {
+/** Documento Firestore months/{month_key}. */
+export interface MonthEntry {
   month_key: string // "2026-09"
-  spreadsheet_id: string
-  drive_folder_id: string
   status: 'active' | 'archived'
   created_by: string
   created_at: string
 }
 
-// Nombre de cada pestaña tal como aparece en el Sheet — un solo lugar para evitar
-// strings mágicos repetidos por todo el código.
-export const SHEET_TABS = {
-  plan: 'Plan',
-  escenario: 'Escenario',
-  real: 'Real',
-  bloqueo: 'Bloqueo',
-  nota: 'Nota',
-  results: 'Results',
-  creative: 'Creative',
-  meta: '_Meta',
+// Nombres de las subcolecciones de Firestore bajo months/{monthKey}/... — un
+// solo lugar para evitar strings mágicos repetidos por todo el código.
+export const COLLECTIONS = {
+  months: 'months',
+  plan: 'plan',
+  escenario: 'escenario',
+  real: 'real',
+  bloqueo: 'bloqueo',
+  nota: 'nota',
+  results: 'results',
+  creative: 'creative',
 } as const
-
-export type SheetTabName = (typeof SHEET_TABS)[keyof typeof SHEET_TABS]
-
-// Encabezados en el orden exacto de columnas — usados tanto para leer/escribir
-// filas como para saber qué rango limpiar al clonar un mes (ver planningSheet.ts).
-export const TAB_HEADERS: Record<SheetTabName, string[]> = {
-  [SHEET_TABS.plan]: [
-    'date',
-    'brand',
-    'country',
-    'channel',
-    'scenario_id',
-    'planned_spend',
-    'last_edited_by',
-    'last_edited_at',
-  ],
-  [SHEET_TABS.escenario]: [
-    'scenario_id',
-    'week_start',
-    'brand',
-    'description',
-    'weekly_spend',
-    'is_active',
-    'created_by',
-    'created_at',
-  ],
-  [SHEET_TABS.real]: [
-    'date',
-    'brand',
-    'country',
-    'channel',
-    'actual_spend',
-    'leads',
-    'enrollments',
-    'cm',
-    'ltv',
-    'source_ref',
-    'synced_at',
-  ],
-  [SHEET_TABS.bloqueo]: ['date', 'country', 'reason', 'redistribution_note', 'created_by', 'created_at'],
-  [SHEET_TABS.nota]: [
-    'note_id',
-    'scope',
-    'week_start',
-    'day',
-    'brand',
-    'country',
-    'category',
-    'content',
-    'created_by',
-    'created_at',
-    'updated_at',
-  ],
-  [SHEET_TABS.results]: ['week_start', 'brand', 'country', 'metric', 'value', 'note'],
-  [SHEET_TABS.creative]: ['brand', 'country', 'week_start', 'asset_name', 'asset_url', 'status', 'notes'],
-  [SHEET_TABS.meta]: ['key', 'value'],
-}

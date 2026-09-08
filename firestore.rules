@@ -1,10 +1,12 @@
 rules_version = '2';
 
-// Única capa de confidencialidad para presencia/actividad (los datos del
-// plan viven en Google Sheets, protegidos por su propio ACL de Drive — ver
-// README y el plan de arquitectura, sección 2). Nunca alcanza con
-// `request.auth != null`: cualquier cuenta de Google podría autenticarse en
-// Firebase si solo chequeamos eso. El dominio se valida en cada regla.
+// Firestore es la única fuente de datos de esta app (ver pivote de Google
+// Sheets a Firestore en el plan de arquitectura): tanto los datos del plan
+// (months/{monthKey}/plan|escenario|nota|bloqueo|real|results|creative) como
+// la presencia/actividad en tiempo real (presence/, activity/). Nunca
+// alcanza con `request.auth != null`: cualquier cuenta de Google podría
+// autenticarse en Firebase si solo chequeamos eso. El dominio se valida en
+// cada regla.
 service cloud.firestore {
   match /databases/{database}/documents {
 
@@ -12,6 +14,20 @@ service cloud.firestore {
       return request.auth != null
         && request.auth.token.email != null
         && request.auth.token.email.matches('.*@openenglish[.]com$');
+    }
+
+    // Datos del plan: un documento por mes, con subcolecciones de datos
+    // (plan, escenario, nota, bloqueo, real, results, creative). Todo el
+    // equipo puede leer/escribir — es una herramienta interna compartida,
+    // no hay permisos por rol en esta fase.
+    match /months/{monthKey} {
+      allow read: if isOeUser();
+      allow create, update: if isOeUser();
+      allow delete: if false;
+
+      match /{collection}/{docId} {
+        allow read, write: if isOeUser();
+      }
     }
 
     match /presence/{monthKey}/users/{uid} {

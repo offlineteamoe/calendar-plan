@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { addNota, getNotas } from '../lib/planningSheet'
+import { addNota, getNotas } from '../lib/store'
 import { logActivity } from '../hooks/useActivityFeed'
 import type { NotaCategory, NotaRow } from '../types'
 import { useAuth } from '../context/AuthContext'
@@ -14,17 +14,16 @@ const CATEGORY_LABELS: Record<NotaCategory, string> = {
 
 interface Props {
   monthKey: string
-  spreadsheetId: string
 }
 
-export function NotesTab({ monthKey, spreadsheetId }: Props) {
+export function NotesTab({ monthKey }: Props) {
   const { user } = useAuth()
   const queryClient = useQueryClient()
   const [weekStart, setWeekStart] = useState('')
   const [category, setCategory] = useState<NotaCategory>('general')
   const [content, setContent] = useState('')
 
-  const notasQuery = useQuery({ queryKey: ['notas', monthKey], queryFn: () => getNotas(spreadsheetId) })
+  const notasQuery = useQuery({ queryKey: ['notas', monthKey], queryFn: () => getNotas(monthKey) })
 
   const addMutation = useMutation({
     mutationFn: async () => {
@@ -42,7 +41,7 @@ export function NotesTab({ monthKey, spreadsheetId }: Props) {
         created_at: now,
         updated_at: now,
       }
-      await addNota(spreadsheetId, row)
+      await addNota(monthKey, row)
       await logActivity(monthKey, { type: 'note', sheetTab: 'Nota', range: row.week_start, userEmail: user?.email ?? '', userInitials: user?.initials ?? '' })
     },
     onSuccess: () => {

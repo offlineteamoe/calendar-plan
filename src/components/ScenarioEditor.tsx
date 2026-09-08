@@ -1,13 +1,12 @@
 import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { addEscenario, getEscenarios, setActiveEscenario } from '../lib/planningSheet'
+import { addEscenario, getEscenarios, setActiveEscenario } from '../lib/store'
 import { logActivity } from '../hooks/useActivityFeed'
 import type { Brand, EscenarioRow } from '../types'
 import { useAuth } from '../context/AuthContext'
 
 interface Props {
   monthKey: string
-  spreadsheetId: string
   brand: Brand
 }
 
@@ -18,7 +17,7 @@ interface Props {
  * por país que hoy hace el Excel vía fórmulas queda para cuando se conecten
  * datos reales de atribución (fase 2).
  */
-export function ScenarioEditor({ monthKey, spreadsheetId, brand }: Props) {
+export function ScenarioEditor({ monthKey, brand }: Props) {
   const { user } = useAuth()
   const queryClient = useQueryClient()
   const [weekStart, setWeekStart] = useState('')
@@ -27,7 +26,7 @@ export function ScenarioEditor({ monthKey, spreadsheetId, brand }: Props) {
 
   const escenariosQuery = useQuery({
     queryKey: ['escenarios', monthKey, brand],
-    queryFn: () => getEscenarios(spreadsheetId),
+    queryFn: () => getEscenarios(monthKey),
   })
 
   const addMutation = useMutation({
@@ -42,7 +41,7 @@ export function ScenarioEditor({ monthKey, spreadsheetId, brand }: Props) {
         created_by: user?.email ?? '',
         created_at: new Date().toISOString(),
       }
-      await addEscenario(spreadsheetId, row)
+      await addEscenario(monthKey, row)
       await logActivity(monthKey, { type: 'scenario', sheetTab: 'Escenario', range: row.week_start, userEmail: user?.email ?? '', userInitials: user?.initials ?? '' })
     },
     onSuccess: () => {
@@ -53,7 +52,7 @@ export function ScenarioEditor({ monthKey, spreadsheetId, brand }: Props) {
   })
 
   const activateMutation = useMutation({
-    mutationFn: (row: EscenarioRow) => setActiveEscenario(spreadsheetId, row.scenario_id, row.week_start, row.brand),
+    mutationFn: (row: EscenarioRow) => setActiveEscenario(monthKey, row.scenario_id, row.week_start, row.brand),
     onSuccess: () => void queryClient.invalidateQueries({ queryKey: ['escenarios', monthKey, brand] }),
   })
 
