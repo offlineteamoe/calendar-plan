@@ -1,0 +1,35 @@
+rules_version = '2';
+
+// Única capa de confidencialidad para presencia/actividad (los datos del
+// plan viven en Google Sheets, protegidos por su propio ACL de Drive — ver
+// README y el plan de arquitectura, sección 2). Nunca alcanza con
+// `request.auth != null`: cualquier cuenta de Google podría autenticarse en
+// Firebase si solo chequeamos eso. El dominio se valida en cada regla.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isOeUser() {
+      return request.auth != null
+        && request.auth.token.email != null
+        && request.auth.token.email.matches('.*@openenglish[.]com$');
+    }
+
+    match /presence/{monthKey}/users/{uid} {
+      allow read: if isOeUser();
+      // Cada quien solo puede escribir/borrar su propio documento de presencia.
+      allow write: if isOeUser() && request.auth.uid == uid;
+    }
+
+    match /activity/{monthKey}/events/{eventId} {
+      allow read: if isOeUser();
+      allow create: if isOeUser() && request.resource.data.userEmail == request.auth.token.email;
+      // El feed de actividad es de solo-creación: nadie edita ni borra eventos pasados.
+      allow update, delete: if false;
+    }
+
+    // Todo lo demás, denegado por defecto.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
