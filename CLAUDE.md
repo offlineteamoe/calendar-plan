@@ -154,8 +154,13 @@ npm run lint
 
 Para revisar diseño sin sesión de Google: parchea temporalmente `App.tsx` con
 un harness que renderice el componente con datos falsos, toma la captura, y
-**restaura el archivo** (`git checkout --` o una copia previa) antes de
-compilar y subir.
+**restaura el archivo** antes de compilar y subir.
+
+Restaurar **archivo por archivo**: `git checkout -- <una ruta>`. Con varias
+rutas, si una no está en git el comando falla entero y **no restaura ninguna**,
+sin que se note. Así se publicó una vez `if (false && status !== 'signed-in')`
+y la app quedó sin pedir login en producción. `npm run build` ahora lo detecta
+(`scripts/check-no-debug.mjs`), pero comprueba con `git diff` antes de subir.
 
 El token de GitHub del usuario **no tiene permiso `workflow`**: cualquier
 cambio a `.github/workflows/deploy.yml` hay que pedírselo por la interfaz web
