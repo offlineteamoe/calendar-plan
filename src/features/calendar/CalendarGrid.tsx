@@ -1,7 +1,8 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { getPlanRows, savePlanCell, type Scope } from '../../lib/store'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { savePlanCell, type Scope } from '../../lib/store'
+import { useLiveDocs } from '../../hooks/useLiveDocs'
 import { getMonthWeeks, isInMonth, isoWeekNumber, weekdayLabels } from '../../lib/dateUtils'
-import { LATAM_PARTS, type PlanRow, type VersionEntry } from '../../types'
+import { COLLECTIONS, LATAM_PARTS, type PlanRow, type VersionEntry } from '../../types'
 import { useAuth } from '../../context/AuthContext'
 import { useRole } from '../../hooks/useRole'
 import { useI18n } from '../../i18n/I18nContext'
@@ -23,10 +24,7 @@ export function CalendarGrid({ monthKey, scope, version, channel, latamView }: P
   const queryClient = useQueryClient()
   const author = { email: user?.email ?? '', initials: user?.initials ?? '' }
 
-  const planQuery = useQuery({
-    queryKey: ['plan', monthKey, scope.versionId],
-    queryFn: () => getPlanRows(monthKey, scope.versionId),
-  })
+  const planQuery = useLiveDocs(monthKey, COLLECTIONS.plan, scope.versionId, (raw) => raw as unknown as PlanRow)
 
   const saveMutation = useMutation({
     mutationFn: ({ date, spend }: { date: string; spend: number }) => {
@@ -43,13 +41,10 @@ export function CalendarGrid({ monthKey, scope, version, channel, latamView }: P
       }
       return savePlanCell(monthKey, scope, version.letter, row, author, locale)
     },
-    onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ['plan', monthKey, scope.versionId] })
-      void queryClient.invalidateQueries({ queryKey: ['changes', monthKey] })
-    },
+    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ['changes', monthKey] }),
   })
 
-  const rows = planQuery.data ?? []
+  const rows = planQuery.data
   const spendByDate = new Map<string, number>()
   let monthTotal = 0
   for (const r of rows) {

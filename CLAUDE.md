@@ -87,12 +87,19 @@ Lo que otra persona puede cambiar mientras miras la pantalla **tiene que ser un
 listener**, no una consulta en caché. Ya pasó una vez: el estado
 maybe/aprobado se leía una sola vez y los demás seguían viendo "aprobado".
 
-- `useVersions` — versiones y su estado de aprobación (`onSnapshot`).
-- `useChanges` — historial del mes.
+- `useLiveDocs` — **todos los datos del calendario**: plan, notas, escenarios,
+  resultados y creativos. Es la primitiva: subcolección del mes filtrada por
+  versión, con `onSnapshot`.
+- `useVersions` — versiones y su estado de aprobación.
+- `useChanges` — historial del mes (filtrado por autor si no administras).
 - `useActivityFeed` — campanita: mes abierto + eventos globales (`_global`).
 - `usePresence` — quién está conectado.
-- `CalendarPage` refresca las consultas de datos cuando aparece un cambio de
-  **otra** persona.
+
+**No** vuelvas a leer datos del calendario con `useQuery`. Se hizo así al
+principio —lectura en caché más un aviso por el historial para refrescar— y
+falló dos veces: el aviso tardaba, y dejó de llegar a las cuentas de consulta
+cuando se restringió quién puede leer el historial ajeno. Se veía como una
+nota borrada que seguía en pantalla de otra persona hasta que hacía clic.
 
 **Nunca uses `where` + `orderBy` sobre campos distintos**: obliga a crear un
 índice compuesto a mano en la consola de Firebase y la pantalla se rompe en

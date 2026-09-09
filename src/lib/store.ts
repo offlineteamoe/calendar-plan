@@ -304,11 +304,6 @@ function planDocId(scope: Scope, date: string, channel: string): string {
   return `${scopeKey(scope)}_${date}_${channel}`
 }
 
-export async function getPlanRows(monthKey: string, versionId: string): Promise<PlanRow[]> {
-  const snapshot = await getDocs(query(subCol(getDb(), monthKey, COLLECTIONS.plan), where('version_id', '==', versionId)))
-  return snapshot.docs.map((d) => d.data() as PlanRow)
-}
-
 export async function savePlanCell(
   monthKey: string,
   scope: Scope,
@@ -343,13 +338,6 @@ export async function savePlanCell(
 }
 
 // ---------------- Escenarios ----------------
-
-export async function getEscenarios(monthKey: string, versionId: string): Promise<EscenarioRow[]> {
-  const snapshot = await getDocs(
-    query(subCol(getDb(), monthKey, COLLECTIONS.escenario), where('version_id', '==', versionId)),
-  )
-  return snapshot.docs.map((d) => d.data() as EscenarioRow)
-}
 
 export async function addEscenario(
   monthKey: string,
@@ -409,15 +397,8 @@ export async function setActiveEscenario(
 
 // ---------------- Notas ----------------
 
-export async function getNotas(monthKey: string, versionId: string): Promise<NotaRow[]> {
-  const snapshot = await getDocs(query(subCol(getDb(), monthKey, COLLECTIONS.nota), where('version_id', '==', versionId)))
-  return snapshot.docs
-    .map((d) => normalizeNota(d.data() as Record<string, unknown>, versionId))
-    .sort((a, b) => (a.created_at < b.created_at ? 1 : -1))
-}
-
 /** Tolera notas guardadas por versiones anteriores de la app. */
-function normalizeNota(raw: Record<string, unknown>, versionId: string): NotaRow {
+export function normalizeNota(raw: Record<string, unknown>, versionId: string): NotaRow {
   const legacyMap: Record<string, NotaRow['kind']> = {
     promo: 'otro',
     channel_toggle: 'cambio',
@@ -567,11 +548,6 @@ export async function setNotaTranslations(
 // ---------------- Resultados y creativos (una tarjeta por semana) ----------------
 
 type WeekCardKind = typeof COLLECTIONS.results | typeof COLLECTIONS.creative
-
-export async function getWeekCards(monthKey: string, kind: WeekCardKind, versionId: string): Promise<WeekCardRow[]> {
-  const snapshot = await getDocs(query(subCol(getDb(), monthKey, kind), where('version_id', '==', versionId)))
-  return snapshot.docs.map((d) => d.data() as WeekCardRow)
-}
 
 export async function saveWeekCard(
   monthKey: string,

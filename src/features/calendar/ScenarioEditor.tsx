@@ -1,11 +1,12 @@
 import { useMemo, useState } from 'react'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { addEscenario, getEscenarios, setActiveEscenario, type Scope } from '../../lib/store'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { addEscenario, setActiveEscenario, type Scope } from '../../lib/store'
+import { useLiveDocs } from '../../hooks/useLiveDocs'
 import { currentWeekStart } from '../../lib/dateUtils'
 import { useAuth } from '../../context/AuthContext'
 import { useI18n } from '../../i18n/I18nContext'
 import { useRole } from '../../hooks/useRole'
-import type { EscenarioRow, VersionEntry } from '../../types'
+import { COLLECTIONS, type EscenarioRow, type VersionEntry } from '../../types'
 
 /** Escenarios semanales de la versión + marca + región abiertas. */
 export function ScenarioEditor({ monthKey, scope, version }: { monthKey: string; scope: Scope; version: VersionEntry }) {
@@ -21,13 +22,14 @@ export function ScenarioEditor({ monthKey, scope, version }: { monthKey: string;
     [user?.email, user?.initials],
   )
 
-  const scenariosQuery = useQuery({
-    queryKey: ['escenarios', monthKey, scope.versionId],
-    queryFn: () => getEscenarios(monthKey, scope.versionId),
-  })
+  const scenariosQuery = useLiveDocs(
+    monthKey,
+    COLLECTIONS.escenario,
+    scope.versionId,
+    (raw) => raw as unknown as EscenarioRow,
+  )
 
   const invalidate = () => {
-    void queryClient.invalidateQueries({ queryKey: ['escenarios', monthKey, scope.versionId] })
     void queryClient.invalidateQueries({ queryKey: ['changes', monthKey] })
   }
 
@@ -63,7 +65,7 @@ export function ScenarioEditor({ monthKey, scope, version }: { monthKey: string;
     onSuccess: invalidate,
   })
 
-  const scenarios = (scenariosQuery.data ?? []).filter((s) => s.brand === scope.brand && s.country === scope.country)
+  const scenarios = scenariosQuery.data.filter((s) => s.brand === scope.brand && s.country === scope.country)
   const byWeek = new Map<string, EscenarioRow[]>()
   for (const s of scenarios) byWeek.set(s.week_start, [...(byWeek.get(s.week_start) ?? []), s])
 

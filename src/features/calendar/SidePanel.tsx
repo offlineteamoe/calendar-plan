@@ -1,10 +1,10 @@
 import { useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
-import { getPlanRows, type Scope } from '../../lib/store'
+import type { Scope } from '../../lib/store'
+import { useLiveDocs } from '../../hooks/useLiveDocs'
 import { NotesPanel } from '../notes/NotesPanel'
 import { ScenarioEditor } from './ScenarioEditor'
 import { WeekCardsPanel } from './WeekCardsPanel'
-import { CHANNELS, COLLECTIONS, COUNTRY_LABELS, LATAM_PARTS, type VersionEntry } from '../../types'
+import { CHANNELS, COLLECTIONS, COUNTRY_LABELS, LATAM_PARTS, type PlanRow, type VersionEntry } from '../../types'
 import { useI18n } from '../../i18n/I18nContext'
 import type { CalendarWeek } from '../../lib/dateUtils'
 
@@ -30,12 +30,9 @@ export function SidePanel({ monthKey, scope, version, weeks, latamView }: Props)
   const { t, locale } = useI18n()
   const [tab, setTab] = useState<TabKey>('summary')
 
-  const planQuery = useQuery({
-    queryKey: ['plan', monthKey, scope.versionId],
-    queryFn: () => getPlanRows(monthKey, scope.versionId),
-  })
+  const planQuery = useLiveDocs(monthKey, COLLECTIONS.plan, scope.versionId, (raw) => raw as unknown as PlanRow)
 
-  const rows = (planQuery.data ?? []).filter((r) => {
+  const rows = planQuery.data.filter((r) => {
     if (r.brand !== scope.brand) return false
     return latamView ? LATAM_PARTS.includes(r.country) : r.country === scope.country
   })

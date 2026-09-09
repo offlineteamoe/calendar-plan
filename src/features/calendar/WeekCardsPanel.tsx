@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { getWeekCards, saveWeekCard, type Scope } from '../../lib/store'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { saveWeekCard, type Scope } from '../../lib/store'
+import { useLiveDocs } from '../../hooks/useLiveDocs'
 import { WeekGrid } from './WeekGrid'
 import { useAuth } from '../../context/AuthContext'
 import { useRole } from '../../hooks/useRole'
@@ -29,10 +30,7 @@ export function WeekCardsPanel({ monthKey, scope, version, weeks, kind, placehol
     [user?.email, user?.initials],
   )
 
-  const cardsQuery = useQuery({
-    queryKey: [kind, monthKey, scope.versionId],
-    queryFn: () => getWeekCards(monthKey, kind, scope.versionId),
-  })
+  const cardsQuery = useLiveDocs(monthKey, kind, scope.versionId, (raw) => raw as unknown as WeekCardRow)
 
   const saveMutation = useMutation({
     mutationFn: ({ weekStart, content }: { weekStart: string; content: string }) => {
@@ -48,13 +46,10 @@ export function WeekCardsPanel({ monthKey, scope, version, weeks, kind, placehol
       }
       return saveWeekCard(monthKey, kind, scope, version.letter, row, author)
     },
-    onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: [kind, monthKey, scope.versionId] })
-      void queryClient.invalidateQueries({ queryKey: ['changes', monthKey] })
-    },
+    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ['changes', monthKey] }),
   })
 
-  const cards = (cardsQuery.data ?? []).filter((c) => c.brand === scope.brand && c.country === scope.country)
+  const cards = cardsQuery.data.filter((c) => c.brand === scope.brand && c.country === scope.country)
   const byWeek = new Map(cards.map((c) => [c.week_start, c]))
 
   return (
@@ -64,9 +59,9 @@ export function WeekCardsPanel({ monthKey, scope, version, weeks, kind, placehol
         {saveMutation.isPending && <span className="muted small">{t('common.saving')}</span>}
       </div>
 
-      {cardsQuery.isError && (
+      {cardsQuery.error && (
         <p className="error-text" style={{ padding: '8px 12px' }}>
-          {(cardsQuery.error as Error).message}
+          {cardsQuery.error.message}
         </p>
       )}
 

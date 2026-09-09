@@ -1,6 +1,16 @@
 import { useMemo, useState } from 'react'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { addNota, deleteNota, getNotas, notaDocId, setNotaTranslations, updateNota, type Scope } from '../../lib/store'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
+import {
+  addNota,
+  deleteNota,
+  normalizeNota,
+  notaDocId,
+  setNotaTranslations,
+  updateNota,
+  type Scope,
+} from '../../lib/store'
+import { useLiveDocs } from '../../hooks/useLiveDocs'
+import { COLLECTIONS } from '../../types'
 import { buildNoteText, detectLocale, pickNoteText } from '../../lib/translate'
 import { WeeklyNotes } from './WeeklyNotes'
 import { NoteEditorModal } from './NoteEditorModal'
@@ -78,13 +88,13 @@ export function NotesPanel({ monthKey, scope, version, weeks }: Props) {
   const canSeeHistory = (note: NotaRow) => canEdit || note.created_by === user?.email
   const kindsFor = (note: NotaRow) => (isViewerNote(note) ? [NOTA_KIND_VIEWER] : NOTA_KINDS_ADMIN)
 
-  const notesQuery = useQuery({
-    queryKey: ['notas', monthKey, scope.versionId],
-    queryFn: () => getNotas(monthKey, scope.versionId),
-  })
+  // En vivo: lo que otra persona escriba, edite o borre aparece al instante.
+  const notesQuery = useLiveDocs(monthKey, COLLECTIONS.nota, scope.versionId, (raw) =>
+    normalizeNota(raw, scope.versionId),
+  )
 
+  // El listener ya trae la nota nueva; esto es solo para el historial.
   const invalidate = () => {
-    void queryClient.invalidateQueries({ queryKey: ['notas', monthKey, scope.versionId] })
     void queryClient.invalidateQueries({ queryKey: ['changes', monthKey] })
   }
 
@@ -93,7 +103,6 @@ export function NotesPanel({ monthKey, scope, version, weeks }: Props) {
     if (Object.keys(text).length <= 1) return
     try {
       await setNotaTranslations(monthKey, scope, row.note_id, { ...row, source_lang: source, text })
-      void queryClient.invalidateQueries({ queryKey: ['notas', monthKey, scope.versionId] })
     } catch (err) {
       console.warn('No se pudieron guardar las traducciones de la nota:', err)
     }
@@ -175,7 +184,10 @@ export function NotesPanel({ monthKey, scope, version, weeks }: Props) {
     },
   })
 
-  const all = useMemo(() => notesQuery.data ?? [], [notesQuery.data])
+  const all = useMemo(
+    () => [...notesQuery.data].sort((a, b) => (a.created_at < b.created_at ? 1 : -1)),
+    [notesQuery.data],
+  )
   const scoped = useMemo(
     () => all.filter((n) => n.brand === scope.brand && n.country === scope.country),
     [all, scope.brand, scope.country],
@@ -224,7 +236,7 @@ export function NotesPanel({ monthKey, scope, version, weeks }: Props) {
         </div>
       </div>
 
-      {notesQuery.isError && (
+      {notesQuery.error && (
         <p className="error-text" style={{ padding: '8px 12px' }}>
           {t('notes.loadError')}
         </p>

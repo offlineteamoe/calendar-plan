@@ -116,12 +116,6 @@ export function CalendarPage() {
     refreshData()
   }, [lastForeignChange, refreshData])
 
-  useEffect(() => {
-    if (canEdit) return
-    const timer = setInterval(refreshData, 60_000)
-    return () => clearInterval(timer)
-  }, [canEdit, refreshData])
-
   const statusMutation = useMutation({
     mutationFn: () => {
       if (!version || !scope) throw new Error('sin version')

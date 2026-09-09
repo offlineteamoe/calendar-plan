@@ -135,3 +135,22 @@ tiempo. Si se elimina un mes, Google no lo puede devolver. Hoy lo contienen
 tres cosas: solo los administradores pueden borrar, hay confirmación explícita,
 y el borrado queda registrado en `months/_global/changes`. Nada de eso es un
 respaldo. Pendiente: una exportación periódica de las colecciones.
+
+
+## Los datos del calendario se escuchan, no se consultan
+
+Durante un tiempo solo la presencia y el estado de aprobación eran listeners.
+El plan, las notas, los escenarios y las tarjetas semanales se leían una vez y
+se quedaban en caché; lo que las refrescaba era una señal indirecta: al
+detectar en el historial un cambio de otra persona, se invalidaban las
+consultas.
+
+Eso falló dos veces por el mismo motivo —depender de un intermediario— y la
+segunda de forma invisible: al restringir el historial para que nadie lea el
+rastro ajeno, las cuentas de consulta dejaron de recibir la señal y su pantalla
+se quedaba congelada hasta que hacían clic en algo. Una nota borrada seguía
+ahí.
+
+Ahora todo eso usa `useLiveDocs` (`onSnapshot`). Firestore empuja el cambio;
+no hay nada que avisar, nada que invalidar y nada que sondear. Es la razón por
+la que se eligió Firestore en primer lugar, y no se estaba aprovechando.
