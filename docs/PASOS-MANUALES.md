@@ -1,14 +1,35 @@
 # Lo que falta hacer a mano
 
-Son cinco cosas (la última solo si aparece un aviso). Ninguna es código: son permisos y llaves que solo se pueden
+Son cinco pasos más una comprobación previa (y el último solo si aparece un aviso). Ninguna es código: son permisos y llaves que solo se pueden
 tocar desde una consola con tu cuenta. Están en orden de importancia — si solo
 haces las dos primeras, la herramienta ya funciona bien y de forma segura.
 
 Datos que vas a necesitar en varios pasos:
 
-- Proyecto de Firebase: **`calendar-plan-c36b5`**
+- Proyecto de Firebase: **`oe-search-alert`** — se llama *"Open English Auth
+  Services"* en la consola. Es el que tiene la app web **Plan de Pauta** y los
+  datos reales.
+  **No** es `calendar-plan-c36b5`: ese quedó vacío y no se usa. Si abres la
+  consola y no ves "Plan de Pauta" en la lista de apps, estás en el proyecto
+  equivocado.
 - Repositorio: **`offlineteamoe/calendar-plan`**
 - Sitio publicado: **https://offlineteamoe.github.io/calendar-plan/**
+
+---
+
+## Paso 0 — Comprobar que no hay otra cosa usando esa base
+
+`oe-search-alert` no es un proyecto exclusivo de esta herramienta: su nombre
+("Open English Auth Services") sugiere que se creó para otra cosa. Las reglas
+de seguridad se aplican a **toda** la base de datos del proyecto, y terminan
+con un "todo lo demás, denegado". Si otra herramienta guarda datos en esa misma
+base, publicar las reglas la dejaría sin acceso.
+
+**Ir a:** https://console.firebase.google.com/project/oe-search-alert/firestore/data
+
+Mira la primera columna, la de colecciones. Deberías ver solo `months`,
+`presence` y —si ya hiciste el paso 2— `config`. **Si aparece cualquier otra
+colección que no reconozcas, para y avísame** antes de publicar nada.
 
 ---
 
@@ -18,7 +39,7 @@ Sin esto, cualquier persona del dominio puede editar la planificación: la
 separación entre administradores y consulta **no existe** hasta que publiques
 estas reglas. Es el paso que más importa.
 
-**Ir a:** https://console.firebase.google.com/project/calendar-plan-c36b5/firestore/rules
+**Ir a:** https://console.firebase.google.com/project/oe-search-alert/firestore/rules
 
 1. Vas a ver un editor con las reglas actuales.
 2. Selecciona **todo** el contenido (clic dentro del editor y `Ctrl + A`) y
@@ -52,7 +73,7 @@ código como lista de arranque, así que **la herramienta ya funciona sin este
 paso**. Este documento sirve para agregar o quitar administradores más adelante
 **sin tener que volver a desplegar nada**.
 
-**Ir a:** https://console.firebase.google.com/project/calendar-plan-c36b5/firestore/data
+**Ir a:** https://console.firebase.google.com/project/oe-search-alert/firestore/data
 
 1. Pulsa **Iniciar colección**.
 2. ID de la colección: `config` → **Siguiente**.
@@ -83,11 +104,11 @@ llave en Google Cloud y decirle al despliegue que la use.
 
 ### 3a. Crear y restringir la llave
 
-**Ir a:** https://console.cloud.google.com/apis/library/translate.googleapis.com?project=calendar-plan-c36b5
+**Ir a:** https://console.cloud.google.com/apis/library/translate.googleapis.com?project=oe-search-alert
 
 1. Pulsa **Habilitar** (si ya está habilitada, sigue de largo).
 2. Ve a las credenciales:
-   https://console.cloud.google.com/apis/credentials?project=calendar-plan-c36b5
+   https://console.cloud.google.com/apis/credentials?project=oe-search-alert
 3. **Crear credenciales → Clave de API**. Copia la clave que aparece.
 4. Pulsa **Editar clave de API** (o el lápiz junto a la clave nueva) y
    configura:
@@ -140,7 +161,7 @@ automática está activa.
 código ya lo acepta, pero Firebase tiene su propia lista de dominios
 autorizados para el acceso.
 
-**Ir a:** https://console.firebase.google.com/project/calendar-plan-c36b5/authentication/settings
+**Ir a:** https://console.firebase.google.com/project/oe-search-alert/authentication/settings
 
 1. Sección **Dominios autorizados**.
 2. Confirma que aparece `offlineteamoe.github.io`. Si no está, agrégalo con

@@ -10,7 +10,11 @@ resolviendo mal para esta arquitectura.
 
 - Repo: `github.com/offlineteamoe/calendar-plan` (rama `main`)
 - Publicado: `https://offlineteamoe.github.io/calendar-plan/`
-- Proyecto Firebase: `calendar-plan-c36b5`
+- Proyecto Firebase: `oe-search-alert` (se muestra como "Open English Auth
+  Services"). Es el único que se usa; `calendar-plan-c36b5` se creó por error
+  al principio, está vacío, y **no** hay que apuntar nada ahí. La fuente de
+  verdad es `VITE_FIREBASE_PROJECT_ID` en `.env.local` y en las Variables del
+  repositorio, nunca lo que diga un documento.
 - Carpeta de trabajo: `C:\Users\william.fonseca\Projects\media-plan-calendar`
   (**no** en la unidad G: — `npm install` falla ahí por bloqueo de archivos de
   Google Drive)
