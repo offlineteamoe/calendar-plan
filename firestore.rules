@@ -1,12 +1,11 @@
 rules_version = '2';
 
-// Firestore es la única fuente de datos de esta app (ver pivote de Google
-// Sheets a Firestore en el plan de arquitectura): tanto los datos del plan
-// (months/{monthKey}/plan|escenario|nota|bloqueo|real|results|creative) como
-// la presencia/actividad en tiempo real (presence/, activity/). Nunca
-// alcanza con `request.auth != null`: cualquier cuenta de Google podría
-// autenticarse en Firebase si solo chequeamos eso. El dominio se valida en
-// cada regla.
+// Firestore es la única fuente de datos de la app: datos del plan
+// (months/{monthKey}/plan|nota|escenario|bloqueo|changes|…), presencia en
+// tiempo real y registro de cambios.
+//
+// Nunca alcanza con `request.auth != null`: cualquier cuenta de Google podría
+// autenticarse en Firebase. El dominio se valida en CADA regla.
 service cloud.firestore {
   match /databases/{database}/documents {
 
@@ -16,10 +15,8 @@ service cloud.firestore {
         && request.auth.token.email.matches('.*@openenglish[.]com$');
     }
 
-    // Datos del plan: un documento por mes, con subcolecciones de datos
-    // (plan, escenario, nota, bloqueo, real, results, creative). Todo el
-    // equipo puede leer/escribir — es una herramienta interna compartida,
-    // no hay permisos por rol en esta fase.
+    // Un documento por mes, con sus subcolecciones de datos. Todo el equipo
+    // puede leer y escribir: es una herramienta interna compartida.
     match /months/{monthKey} {
       allow read: if isOeUser();
       allow create, update, delete: if isOeUser();
@@ -29,17 +26,16 @@ service cloud.firestore {
       }
     }
 
-    match /presence/{monthKey}/users/{uid} {
+    // Consulta de grupo de colección para el registro de actividad global
+    // (página /logs), que lee los cambios de todos los meses de una vez.
+    match /{path=**}/changes/{changeId} {
       allow read: if isOeUser();
-      // Cada quien solo puede escribir/borrar su propio documento de presencia.
-      allow write: if isOeUser() && request.auth.uid == uid;
     }
 
-    match /activity/{monthKey}/events/{eventId} {
+    match /presence/{monthKey}/users/{uid} {
       allow read: if isOeUser();
-      allow create: if isOeUser() && request.resource.data.userEmail == request.auth.token.email;
-      // El feed de actividad es de solo-creación: nadie edita ni borra eventos pasados.
-      allow update, delete: if false;
+      // Cada quien solo escribe/borra su propio documento de presencia.
+      allow write: if isOeUser() && request.auth.uid == uid;
     }
 
     // Todo lo demás, denegado por defecto.

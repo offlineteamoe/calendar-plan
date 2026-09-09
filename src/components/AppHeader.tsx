@@ -1,175 +1,180 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { Link } from 'react-router-dom'
 import { Logo } from './Logo'
+import { HistoryMenu } from './HistoryMenu'
+import { PresenceCell } from './PresenceCell'
 import { useI18n } from '../i18n/I18nContext'
 import { useTheme } from '../context/ThemeContext'
 import { useAuth } from '../context/AuthContext'
 import { LOCALES } from '../i18n/translations'
 import type { PresenceUser } from '../hooks/usePresence'
-import type { ActivityEvent } from '../hooks/useActivityFeed'
+import type { ChangeRecord } from '../types'
 
-function SunIcon() {
+function Icon({ path, size = 17 }: { path: ReactNode; size?: number }) {
   return (
-    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
-      <circle cx="12" cy="12" r="4.2" />
-      <path d="M12 2.5v2.4M12 19.1v2.4M4.4 4.4l1.7 1.7M17.9 17.9l1.7 1.7M2.5 12h2.4M19.1 12h2.4M4.4 19.6l1.7-1.7M17.9 6.1l1.7-1.7" strokeLinecap="round" />
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      {path}
     </svg>
   )
 }
-function MoonIcon() {
-  return (
-    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
-      <path d="M20 14.5A8.5 8.5 0 1 1 9.5 4a6.8 6.8 0 0 0 10.5 10.5z" strokeLinejoin="round" />
-    </svg>
-  )
-}
-function LaptopIcon() {
-  return (
-    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
-      <rect x="3.5" y="4.5" width="17" height="11" rx="1.4" />
-      <path d="M2 19h20" strokeLinecap="round" />
-    </svg>
-  )
-}
-function HistoryIcon() {
-  return (
-    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
-      <path d="M3 12a9 9 0 1 0 3-6.7" strokeLinecap="round" />
-      <path d="M3 4v4.5h4.5" strokeLinecap="round" strokeLinejoin="round" />
-      <path d="M12 8v4.5l3 2" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  )
-}
-
-function timeAgo(ms: number, locale: string): string {
-  const seconds = Math.max(0, Math.round((Date.now() - ms) / 1000))
-  if (seconds < 60) return locale === 'en' ? 'just now' : locale === 'pt' ? 'agora' : 'ahora'
-  const minutes = Math.round(seconds / 60)
-  if (minutes < 60) return `${minutes}m`
-  return `${Math.round(minutes / 60)}h`
-}
-
-const AREA_LABELS: Record<string, string> = { Plan: 'Plan', Nota: 'Nota', Escenario: 'Escenario', Bloqueo: 'Bloqueo' }
+const sunIcon = (
+  <>
+    <circle cx="12" cy="12" r="4.2" />
+    <path d="M12 2.5v2.4M12 19.1v2.4M4.4 4.4l1.7 1.7M17.9 17.9l1.7 1.7M2.5 12h2.4M19.1 12h2.4M4.4 19.6l1.7-1.7M17.9 6.1l1.7-1.7" />
+  </>
+)
+const moonIcon = <path d="M20 14.5A8.5 8.5 0 1 1 9.5 4a6.8 6.8 0 0 0 10.5 10.5z" />
+const laptopIcon = (
+  <>
+    <rect x="3.5" y="4.5" width="17" height="11" rx="1.4" />
+    <path d="M2 19h20" />
+  </>
+)
+const historyIcon = (
+  <>
+    <path d="M3 12a9 9 0 1 0 3-6.7" />
+    <path d="M3 4v4.5h4.5" />
+    <path d="M12 8v4.5l3 2" />
+  </>
+)
+const undoIcon = (
+  <>
+    <path d="M9 14 4 9l5-5" />
+    <path d="M4 9h10a6 6 0 0 1 0 12h-3" />
+  </>
+)
+const redoIcon = (
+  <>
+    <path d="m15 14 5-5-5-5" />
+    <path d="M20 9H10a6 6 0 0 0 0 12h3" />
+  </>
+)
 
 interface AppHeaderProps {
+  /** Contenido a la izquierda, después del logo (título de página, volver…). */
   start?: ReactNode
   presenceUsers?: PresenceUser[]
-  historyEvents?: ActivityEvent[]
+  /** Solo mis cambios; si se pasa, aparece el botón de historial. */
+  myChanges?: ChangeRecord[]
+  onRevert?: (change: ChangeRecord) => Promise<void>
+  undoRedo?: { undo: () => void; redo: () => void; canUndo: boolean; canRedo: boolean }
 }
 
-export function AppHeader({ start, presenceUsers, historyEvents }: AppHeaderProps) {
+export function AppHeader({ start, presenceUsers, myChanges, onRevert, undoRedo }: AppHeaderProps) {
   const { locale, setLocale, t } = useI18n()
   const { preference, setPreference } = useTheme()
   const { user, status, signOut } = useAuth()
-  const [menuOpen, setMenuOpen] = useState(false)
-  const [langOpen, setLangOpen] = useState(false)
-  const [historyOpen, setHistoryOpen] = useState(false)
-  const menuRef = useRef<HTMLDivElement>(null)
-  const langRef = useRef<HTMLDivElement>(null)
-  const historyRef = useRef<HTMLDivElement>(null)
+  const [openMenu, setOpenMenu] = useState<'lang' | 'user' | 'history' | null>(null)
+  const rootRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     function onClick(e: MouseEvent) {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) setMenuOpen(false)
-      if (langRef.current && !langRef.current.contains(e.target as Node)) setLangOpen(false)
-      if (historyRef.current && !historyRef.current.contains(e.target as Node)) setHistoryOpen(false)
+      if (rootRef.current && !rootRef.current.contains(e.target as Node)) setOpenMenu(null)
     }
     document.addEventListener('mousedown', onClick)
     return () => document.removeEventListener('mousedown', onClick)
   }, [])
 
-  const ThemeIcon = preference === 'dark' ? MoonIcon : preference === 'light' ? SunIcon : LaptopIcon
-  const cycleTheme = () => {
-    setPreference(preference === 'system' ? 'light' : preference === 'light' ? 'dark' : 'system')
-  }
+  const themeIcon = preference === 'dark' ? moonIcon : preference === 'light' ? sunIcon : laptopIcon
+  const cycleTheme = () => setPreference(preference === 'system' ? 'light' : preference === 'light' ? 'dark' : 'system')
 
   return (
     <header className="app-header">
-      <div className="app-header-left">
-        <Logo size={26} />
-        {start && <div className="app-header-start">{start}</div>}
+      <div className="header-left">
+        <Link to="/" className="logo" style={{ textDecoration: 'none' }}>
+          <Logo size={26} glow />
+        </Link>
+        {start}
       </div>
 
-      <div className="app-header-right">
-        {presenceUsers && presenceUsers.length > 0 && (
-          <div className="connected-users-cell">
-            <span className="connected-users-label">{t('header.connectedUsers')}:</span>
-            <div className="connected-users-avatars">
-              {presenceUsers.map((u) => (
-                <span key={u.uid} className="presence-avatar" title={`${u.name} · ${u.currentView}`}>
-                  {u.initials}
-                </span>
-              ))}
-            </div>
-          </div>
-        )}
+      <div className="header-right" ref={rootRef}>
+        {presenceUsers && <PresenceCell users={presenceUsers} />}
 
-        {historyEvents && (
-          <div className="lang-switch" ref={historyRef}>
-            <button className="icon-btn" onClick={() => setHistoryOpen((v) => !v)} title={t('header.history')}>
-              <HistoryIcon />
+        {undoRedo && (
+          <>
+            <button
+              className="icon-btn icon-btn-chrome"
+              onClick={undoRedo.undo}
+              disabled={!undoRedo.canUndo}
+              title={`${t('header.undo')} (Ctrl+Z)`}
+            >
+              <Icon path={undoIcon} />
             </button>
-            {historyOpen && (
-              <div className="dropdown-menu history-menu">
-                <div className="history-menu-title">{t('header.history')}</div>
-                {historyEvents.length === 0 && <p className="muted small history-empty">{t('header.historyEmpty')}</p>}
-                {historyEvents.map((ev) => (
-                  <div className="history-item" key={ev.id}>
-                    <span className="history-item-avatar">{ev.userInitials || '·'}</span>
-                    <div className="history-item-body">
-                      <span>
-                        {ev.userEmail.split('@')[0]} · {AREA_LABELS[ev.sheetTab] ?? ev.sheetTab}
-                      </span>
-                      <span className="muted small">{ev.range}</span>
-                    </div>
-                    <span className="muted small history-item-time">{timeAgo(ev.at, locale)}</span>
-                  </div>
-                ))}
-              </div>
-            )}
+            <button
+              className="icon-btn icon-btn-chrome"
+              onClick={undoRedo.redo}
+              disabled={!undoRedo.canRedo}
+              title={`${t('header.redo')} (Ctrl+Y)`}
+            >
+              <Icon path={redoIcon} />
+            </button>
+          </>
+        )}
+
+        {myChanges && onRevert && (
+          <div className="menu-anchor">
+            <button
+              className="icon-btn icon-btn-chrome"
+              onClick={() => setOpenMenu(openMenu === 'history' ? null : 'history')}
+              title={t('history.title')}
+            >
+              <Icon path={historyIcon} />
+            </button>
+            {openMenu === 'history' && <HistoryMenu changes={myChanges} onRevert={onRevert} onClose={() => setOpenMenu(null)} />}
           </div>
         )}
 
-        <div className="lang-switch" ref={langRef}>
-          <button className="icon-btn lang-btn" onClick={() => setLangOpen((v) => !v)} title={t('header.language')}>
+        <span className="header-divider" />
+
+        <div className="menu-anchor">
+          <button
+            className="icon-btn icon-btn-chrome lang-btn"
+            onClick={() => setOpenMenu(openMenu === 'lang' ? null : 'lang')}
+            title={t('header.language')}
+          >
             {locale.toUpperCase()}
           </button>
-          {langOpen && (
-            <div className="dropdown-menu lang-menu">
+          {openMenu === 'lang' && (
+            <div className="menu-panel" style={{ minWidth: 110 }}>
               {LOCALES.map((l) => (
                 <button
                   key={l.code}
-                  className={`dropdown-item ${l.code === locale ? 'dropdown-item-active' : ''}`}
+                  className={`menu-item ${l.code === locale ? 'menu-item-active' : ''}`}
                   onClick={() => {
                     setLocale(l.code)
-                    setLangOpen(false)
+                    setOpenMenu(null)
                   }}
                 >
-                  {l.label}
+                  {l.name}
                 </button>
               ))}
             </div>
           )}
         </div>
 
-        <button className="icon-btn" onClick={cycleTheme} title={t(`header.theme.${preference}`)}>
-          <ThemeIcon />
+        <button className="icon-btn icon-btn-chrome" onClick={cycleTheme} title={t(`header.theme.${preference}`)}>
+          <Icon path={themeIcon} />
         </button>
 
         {status === 'signed-in' && user && (
-          <div className="user-menu" ref={menuRef}>
-            <button className="avatar-btn" onClick={() => setMenuOpen((v) => !v)} title={user.email}>
+          <div className="menu-anchor">
+            <button
+              className="avatar avatar-me"
+              onClick={() => setOpenMenu(openMenu === 'user' ? null : 'user')}
+              title={user.email}
+            >
               {user.initials}
             </button>
-            {menuOpen && (
-              <div className="dropdown-menu user-dropdown">
-                <div className="user-dropdown-email">{user.email}</div>
-                <button className="dropdown-item" disabled title={t('common.comingSoon')}>
+            {openMenu === 'user' && (
+              <div className="menu-panel">
+                <div className="menu-email">{user.email}</div>
+                <Link to="/logs" className="menu-item" onClick={() => setOpenMenu(null)}>
                   {t('header.viewLogs')}
-                </button>
+                </Link>
                 <button
-                  className="dropdown-item dropdown-item-danger"
+                  className="menu-item menu-item-danger"
                   onClick={() => {
-                    setMenuOpen(false)
+                    setOpenMenu(null)
                     void signOut()
                   }}
                 >

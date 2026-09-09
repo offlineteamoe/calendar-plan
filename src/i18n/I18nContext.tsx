@@ -26,6 +26,11 @@ function interpolate(template: string, vars?: Record<string, string | number>): 
   return template.replace(/\{\{(\w+)\}\}/g, (_, name) => String(vars[name] ?? ''))
 }
 
+/** Idioma para APIs de formato (Intl): "es" → "es-ES", etc. */
+export function intlLocale(locale: Locale): string {
+  return locale === 'es' ? 'es-ES' : locale === 'pt' ? 'pt-BR' : 'en-US'
+}
+
 export function I18nProvider({ children }: { children: ReactNode }) {
   const [locale, setLocaleState] = useState<Locale>(readStoredLocale)
 

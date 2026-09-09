@@ -1,5 +1,6 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
+import { HashRouter } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { AuthProvider } from './context/AuthContext'
 import { ThemeProvider } from './context/ThemeContext'
@@ -10,11 +11,11 @@ import './index.css'
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      // Los datos "viven" en Sheets, no acá: preferimos que el refetch lo
-      // dispare el feed de actividad (ver useActivityFeed) en vez de pollear
-      // a ciegas, así que dejamos un staleTime generoso.
+      // El refetch lo dispara el feed de cambios en tiempo real (useChanges),
+      // no un polling a ciegas: por eso el staleTime es generoso.
       staleTime: 60_000,
       retry: 1,
+      refetchOnWindowFocus: true,
     },
   },
 })
@@ -25,7 +26,9 @@ createRoot(document.getElementById('root')!).render(
       <I18nProvider>
         <QueryClientProvider client={queryClient}>
           <AuthProvider>
-            <App />
+            <HashRouter>
+              <App />
+            </HashRouter>
           </AuthProvider>
         </QueryClientProvider>
       </I18nProvider>

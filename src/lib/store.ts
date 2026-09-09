@@ -1,11 +1,6 @@
-// Toda la data del plan (Plan/Escenario/Nota/Bloqueo/Real/Results/Creative)
-// vive en Firestore, bajo months/{monthKey}/<colección>/<docId> — ver plan de
-// arquitectura (pivote de Google Sheets a Firestore) y firestore.rules.
-//
-// "Crear un mes" es solo registrar el documento months/{monthKey}: a
-// diferencia de un Sheet, una colección de Firestore no necesita nada
-// "clonado" ni "limpiado" — simplemente no tiene documentos hasta que algo
-// se guarda ahí. Eso reemplaza todo el flujo de copiar/limpiar un Sheet.
+// Acceso a datos. Todo vive en Firestore bajo months/{monthKey}/<colección>.
+// Cada escritura sobre datos del plan deja un ChangeRecord (ver changelog.ts)
+// con el estado anterior y el nuevo, para historial, deshacer y auditoría.
 
 import {
   collection,
@@ -22,30 +17,39 @@ import {
   type Firestore,
 } from 'firebase/firestore'
 import { getDb } from './firebaseClient'
-import { COLLECTIONS, type EscenarioRow, type MonthEntry, type NotaRow, type PlanRow } from '../types'
+import { recordChange, type ChangeAuthor } from './changelog'
+import {
+  COLLECTIONS,
+  COUNTRY_LABELS,
+  type EscenarioRow,
+  type MonthEntry,
+  type NotaRow,
+  type PlanRow,
+} from '../types'
 
 function monthsCol(db: Firestore) {
   return collection(db, COLLECTIONS.months)
 }
-
 function subCol(db: Firestore, monthKey: string, name: string) {
   return collection(db, COLLECTIONS.months, monthKey, name)
 }
 
-// ---------- Meses ----------
+// ---------------- Meses ----------------
 
 export async function listMonths(): Promise<MonthEntry[]> {
   const snapshot = await getDocs(query(monthsCol(getDb()), orderBy('month_key', 'desc')))
   return snapshot.docs.map((d) => d.data() as MonthEntry)
 }
 
+export async function getMonth(monthKey: string): Promise<MonthEntry | null> {
+  const snap = await getDoc(doc(getDb(), COLLECTIONS.months, monthKey))
+  return snap.exists() ? (snap.data() as MonthEntry) : null
+}
+
 export async function createMonth(monthKey: string, createdBy: string): Promise<MonthEntry> {
   const db = getDb()
   const ref = doc(db, COLLECTIONS.months, monthKey)
-  const existing = await getDoc(ref)
-  if (existing.exists()) {
-    throw new Error(`El mes ${monthKey} ya existe.`)
-  }
+  if ((await getDoc(ref)).exists()) throw new Error(`El mes ${monthKey} ya existe.`)
   const entry: MonthEntry = {
     month_key: monthKey,
     status: 'active',
@@ -60,10 +64,14 @@ export async function setMonthStatus(monthKey: string, status: MonthEntry['statu
   await updateDoc(doc(getDb(), COLLECTIONS.months, monthKey), { status })
 }
 
-/** Borra un mes completo: sus subcolecciones de datos y el documento del mes. */
+/**
+ * Borra un mes completo: primero el contenido de cada subcolección y al
+ * final el documento del mes. Firestore no borra subcolecciones en cascada,
+ * así que hay que recorrerlas explícitamente.
+ */
 export async function deleteMonth(monthKey: string): Promise<void> {
   const db = getDb()
-  const dataCollections = [
+  const subCollections = [
     COLLECTIONS.plan,
     COLLECTIONS.escenario,
     COLLECTIONS.nota,
@@ -71,21 +79,30 @@ export async function deleteMonth(monthKey: string): Promise<void> {
     COLLECTIONS.real,
     COLLECTIONS.results,
     COLLECTIONS.creative,
+    COLLECTIONS.changes,
   ]
-  for (const name of dataCollections) {
+  for (const name of subCollections) {
     const snapshot = await getDocs(subCol(db, monthKey, name))
     if (snapshot.empty) continue
-    const batch = writeBatch(db)
-    snapshot.docs.forEach((d) => batch.delete(d.ref))
-    await batch.commit()
+    // Firestore admite hasta 500 operaciones por lote.
+    for (let i = 0; i < snapshot.docs.length; i += 450) {
+      const batch = writeBatch(db)
+      snapshot.docs.slice(i, i + 450).forEach((d) => batch.delete(d.ref))
+      await batch.commit()
+    }
   }
   await deleteDoc(doc(db, COLLECTIONS.months, monthKey))
 }
 
-// ---------- Plan ----------
+// ---------------- Plan ----------------
 
 function planDocId(row: Pick<PlanRow, 'date' | 'brand' | 'country' | 'channel'>): string {
   return `${row.date}_${row.brand}_${row.country}_${row.channel}`
+}
+
+function planWhereLabel(row: PlanRow, locale: string): string {
+  const day = new Date(row.date + 'T00:00:00').toLocaleDateString(locale, { day: 'numeric', month: 'short' })
+  return `${day} · ${row.brand} · ${COUNTRY_LABELS[row.country]} · ${row.channel}`
 }
 
 export async function getPlanRows(monthKey: string): Promise<PlanRow[]> {
@@ -93,39 +110,148 @@ export async function getPlanRows(monthKey: string): Promise<PlanRow[]> {
   return snapshot.docs.map((d) => d.data() as PlanRow)
 }
 
-/** Crea o reemplaza (por date+brand+country+channel) una fila de Plan. */
-export async function upsertPlanRow(monthKey: string, row: PlanRow): Promise<void> {
-  const ref = doc(getDb(), COLLECTIONS.months, monthKey, COLLECTIONS.plan, planDocId(row))
+/** Crea o reemplaza una celda del plan y registra el cambio. */
+export async function savePlanCell(
+  monthKey: string,
+  row: PlanRow,
+  author: ChangeAuthor,
+  locale: string,
+): Promise<void> {
+  const db = getDb()
+  const ref = doc(db, COLLECTIONS.months, monthKey, COLLECTIONS.plan, planDocId(row))
+  const existing = await getDoc(ref)
+  const before = existing.exists() ? (existing.data() as Record<string, unknown>) : null
+
   await setDoc(ref, row)
+  await recordChange({
+    monthKey,
+    entity: 'plan',
+    docId: planDocId(row),
+    action: before ? 'update' : 'create',
+    whereLabel: planWhereLabel(row, locale),
+    before,
+    after: row as unknown as Record<string, unknown>,
+    author,
+  })
 }
 
-// ---------- Escenario ----------
+// ---------------- Escenarios ----------------
 
 export async function getEscenarios(monthKey: string): Promise<EscenarioRow[]> {
   const snapshot = await getDocs(subCol(getDb(), monthKey, COLLECTIONS.escenario))
   return snapshot.docs.map((d) => d.data() as EscenarioRow)
 }
 
-export async function addEscenario(monthKey: string, row: EscenarioRow): Promise<void> {
-  const ref = doc(getDb(), COLLECTIONS.months, monthKey, COLLECTIONS.escenario, row.scenario_id)
-  await setDoc(ref, row)
+export async function addEscenario(monthKey: string, row: EscenarioRow, author: ChangeAuthor): Promise<void> {
+  await setDoc(doc(getDb(), COLLECTIONS.months, monthKey, COLLECTIONS.escenario, row.scenario_id), row)
+  await recordChange({
+    monthKey,
+    entity: 'escenario',
+    docId: row.scenario_id,
+    action: 'create',
+    whereLabel: `${row.brand} · ${row.week_start} · ${row.description || '—'}`,
+    before: null,
+    after: row as unknown as Record<string, unknown>,
+    author,
+  })
 }
 
 /** Marca un escenario como el activo de su semana+marca; desactiva los demás. */
-export async function setActiveEscenario(monthKey: string, scenarioId: string, weekStart: string, brand: string): Promise<void> {
+export async function setActiveEscenario(
+  monthKey: string,
+  scenario: EscenarioRow,
+  author: ChangeAuthor,
+): Promise<void> {
   const col = subCol(getDb(), monthKey, COLLECTIONS.escenario)
-  const snapshot = await getDocs(query(col, where('week_start', '==', weekStart), where('brand', '==', brand)))
-  await Promise.all(snapshot.docs.map((d) => updateDoc(d.ref, { is_active: d.id === scenarioId })))
+  const snapshot = await getDocs(
+    query(col, where('week_start', '==', scenario.week_start), where('brand', '==', scenario.brand)),
+  )
+  await Promise.all(
+    snapshot.docs.map((d) => updateDoc(d.ref, { is_active: d.id === scenario.scenario_id })),
+  )
+  await recordChange({
+    monthKey,
+    entity: 'escenario',
+    docId: scenario.scenario_id,
+    action: 'update',
+    whereLabel: `${scenario.brand} · ${scenario.week_start} · ${scenario.description || '—'}`,
+    before: { ...scenario, is_active: false } as unknown as Record<string, unknown>,
+    after: { ...scenario, is_active: true } as unknown as Record<string, unknown>,
+    author,
+  })
 }
 
-// ---------- Nota ----------
+// ---------------- Notas ----------------
 
 export async function getNotas(monthKey: string): Promise<NotaRow[]> {
   const snapshot = await getDocs(subCol(getDb(), monthKey, COLLECTIONS.nota))
-  return snapshot.docs.map((d) => d.data() as NotaRow)
+  return snapshot.docs
+    .map((d) => normalizeNota(d.data() as Record<string, unknown>))
+    .sort((a, b) => (a.created_at < b.created_at ? 1 : -1))
 }
 
-export async function addNota(monthKey: string, row: NotaRow): Promise<void> {
-  const ref = doc(getDb(), COLLECTIONS.months, monthKey, COLLECTIONS.nota, row.note_id)
-  await setDoc(ref, row)
+/**
+ * Tolera notas guardadas por versiones anteriores de la app (tenían
+ * `category`, `week_start` y no `kind`/`created_at` consistentes), para que
+ * las notas viejas sigan visibles en lugar de desaparecer.
+ */
+function normalizeNota(raw: Record<string, unknown>): NotaRow {
+  const legacyCategory = String(raw.category ?? '')
+  const legacyMap: Record<string, NotaRow['kind']> = {
+    promo: 'otro',
+    channel_toggle: 'cambio',
+    rationale: 'info',
+    general: 'info',
+  }
+  const kind = (raw.kind as NotaRow['kind']) ?? legacyMap[legacyCategory] ?? 'otro'
+  const content = String(raw.content ?? '')
+  const sourceLang = (raw.source_lang as NotaRow['source_lang']) ?? 'es'
+  return {
+    note_id: String(raw.note_id ?? crypto.randomUUID()),
+    kind,
+    content,
+    source_lang: sourceLang,
+    text: (raw.text as NotaRow['text']) ?? { [sourceLang]: content },
+    created_at: String(raw.created_at ?? raw.week_start ?? new Date(0).toISOString()),
+    created_by: String(raw.created_by ?? ''),
+    scope_label: String(raw.scope_label ?? raw.week_start ?? ''),
+    brand: (raw.brand as NotaRow['brand']) ?? '',
+    country: (raw.country as NotaRow['country']) ?? '',
+  }
+}
+
+/** Guarda las traducciones que llegaron después de crear la nota. */
+export async function setNotaTranslations(monthKey: string, noteId: string, row: NotaRow): Promise<void> {
+  await updateDoc(doc(getDb(), COLLECTIONS.months, monthKey, COLLECTIONS.nota, noteId), {
+    text: row.text,
+    source_lang: row.source_lang,
+  })
+}
+
+export async function addNota(monthKey: string, row: NotaRow, author: ChangeAuthor): Promise<void> {
+  await setDoc(doc(getDb(), COLLECTIONS.months, monthKey, COLLECTIONS.nota, row.note_id), row)
+  await recordChange({
+    monthKey,
+    entity: 'nota',
+    docId: row.note_id,
+    action: 'create',
+    whereLabel: row.scope_label || monthKey,
+    before: null,
+    after: row as unknown as Record<string, unknown>,
+    author,
+  })
+}
+
+export async function deleteNota(monthKey: string, row: NotaRow, author: ChangeAuthor): Promise<void> {
+  await deleteDoc(doc(getDb(), COLLECTIONS.months, monthKey, COLLECTIONS.nota, row.note_id))
+  await recordChange({
+    monthKey,
+    entity: 'nota',
+    docId: row.note_id,
+    action: 'delete',
+    whereLabel: row.scope_label || monthKey,
+    before: row as unknown as Record<string, unknown>,
+    after: null,
+    author,
+  })
 }

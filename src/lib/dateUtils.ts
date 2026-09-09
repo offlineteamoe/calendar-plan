@@ -64,7 +64,33 @@ export function isInMonth(dateStr: string, monthKey: string): boolean {
   return dateStr.startsWith(monthKey)
 }
 
-const WEEKDAY_LABELS = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom']
-export function weekdayLabel(index: number): string {
-  return WEEKDAY_LABELS[index] ?? ''
+/** Nombres cortos de días, en el idioma activo (lunes primero). */
+export function weekdayLabels(locale: string): string[] {
+  // 2024-01-01 fue lunes: sirve de ancla para generar lun→dom.
+  return Array.from({ length: 7 }, (_, i) => {
+    const d = new Date(2024, 0, 1 + i)
+    const label = d.toLocaleDateString(locale, { weekday: 'short' }).replace('.', '')
+    return label.charAt(0).toUpperCase() + label.slice(1)
+  })
+}
+
+/** "12 sep 2026, 14:32" en el idioma activo. */
+export function formatDateTime(iso: string, locale: string): string {
+  const d = new Date(iso)
+  if (Number.isNaN(d.valueOf())) return iso
+  return d.toLocaleString(locale, { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+}
+
+/** "hace 4 m" / "hace 2 h" — para listas de actividad. */
+export function timeAgo(iso: string, locale: string): string {
+  const then = new Date(iso).valueOf()
+  if (Number.isNaN(then)) return ''
+  const seconds = Math.max(0, Math.round((Date.now() - then) / 1000))
+  const rtf = new Intl.RelativeTimeFormat(locale, { numeric: 'auto' })
+  if (seconds < 60) return rtf.format(-seconds, 'second')
+  const minutes = Math.round(seconds / 60)
+  if (minutes < 60) return rtf.format(-minutes, 'minute')
+  const hours = Math.round(minutes / 60)
+  if (hours < 24) return rtf.format(-hours, 'hour')
+  return rtf.format(-Math.round(hours / 24), 'day')
 }

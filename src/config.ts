@@ -1,15 +1,13 @@
 /**
- * Todo lo que depende del proyecto de Firebase (ver README "Configuración
- * inicial"). Nada de esto es secreto — la config web de Firebase está hecha
- * para vivir en el bundle del cliente; la seguridad real la dan el OAuth
- * consent screen "Internal" del proyecto de Google Cloud detrás de Firebase
- * y las reglas de seguridad de Firestore (firestore.rules), no ocultar
- * estos valores.
+ * Valores que dependen del proyecto de Firebase/Google Cloud (ver README,
+ * "Configuración inicial"). Nada de esto es secreto en el sentido de tener
+ * que esconderlo: la config web de Firebase está hecha para vivir en el
+ * bundle del cliente. La seguridad real la dan el consent screen "Internal"
+ * del proyecto de Google Cloud y las reglas de Firestore.
  */
 
-function readEnv(name: string): string {
-  const value = import.meta.env[name as keyof ImportMetaEnv] as string | undefined
-  return value ?? ''
+function readEnv(name: keyof ImportMetaEnv): string {
+  return (import.meta.env[name] as string | undefined) ?? ''
 }
 
 export const config = {
@@ -23,11 +21,17 @@ export const config = {
     messagingSenderId: readEnv('VITE_FIREBASE_MESSAGING_SENDER_ID'),
     appId: readEnv('VITE_FIREBASE_APP_ID'),
   },
+
+  /**
+   * API key de Cloud Translation, restringida por dominio en Google Cloud.
+   * Si falta, las notas simplemente no se traducen (ver lib/translate.ts).
+   */
+  translateApiKey: readEnv('VITE_GOOGLE_TRANSLATE_KEY'),
 } as const
 
-/** true una vez que hay suficiente config de Firebase para operar. */
 export function isConfigured(): boolean {
-  return Boolean(config.firebase.apiKey && config.firebase.projectId && config.firebase.authDomain && config.firebase.appId)
+  const f = config.firebase
+  return Boolean(f.apiKey && f.projectId && f.authDomain && f.appId)
 }
 
 export function missingConfigKeys(): string[] {

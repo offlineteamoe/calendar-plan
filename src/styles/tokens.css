@@ -1,0 +1,137 @@
+/* Tokens de diseño — única fuente de verdad de color, tipografía y elevación.
+   Tema claro en :root, oscuro bajo prefers-color-scheme y [data-theme=dark]. */
+
+:root {
+  /* Superficies y texto */
+  --bg: #EEF1F8;
+  --bg-deep: #E4E9F4;
+  --surface: #FFFFFF;
+  --surface-2: #F2F5FC;
+  --surface-3: #E7ECF8;
+  --border: #DCE3F0;
+  --border-strong: #C6D0E4;
+  --ink: #0B1020;
+  --ink-soft: #58637C;
+  --ink-faint: #8C97AE;
+
+  /* Marca */
+  --accent: #2B6BFF;
+  --accent-hover: #1B57E6;
+  --accent-ink: #FFFFFF;
+  --accent-soft: #E4EBFF;
+  --accent-glow: rgba(43, 107, 255, 0.28);
+  --accent-2: #16C0E0;
+  --grad-accent: linear-gradient(135deg, #3D7BFF 0%, #1E40C8 100%);
+
+  /* Semánticos */
+  --danger: #D7443E;
+  --danger-soft: #FCE9E8;
+  --warn: #B57508;
+  --warn-soft: #FDF1DC;
+  --ok: #0F9B76;
+  --ok-soft: #DEF5EE;
+  --info: #2B6BFF;
+  --info-soft: #E4EBFF;
+  --neutral: #6B7690;
+  --neutral-soft: #ECEFF6;
+
+  /* Chrome oscuro persistente (header / hero) */
+  --chrome-bg: radial-gradient(120% 160% at 8% -20%, #14265E 0%, #070C1C 55%, #05070F 100%);
+  --chrome-ink: #EEF3FF;
+  --chrome-ink-soft: rgba(238, 243, 255, 0.62);
+  --chrome-border: rgba(255, 255, 255, 0.08);
+  --chrome-hover: rgba(255, 255, 255, 0.1);
+  --chrome-cell: rgba(255, 255, 255, 0.07);
+
+  /* Tipografía */
+  --font-display: 'Manrope', system-ui, -apple-system, sans-serif;
+  --font-body: 'Inter', system-ui, -apple-system, sans-serif;
+
+  /* Elevación */
+  --shadow-sm: 0 1px 2px rgba(11, 16, 32, 0.06), 0 2px 8px rgba(11, 16, 32, 0.04);
+  --shadow-md: 0 4px 12px rgba(11, 16, 32, 0.08), 0 12px 32px rgba(11, 16, 32, 0.07);
+  --shadow-lg: 0 18px 48px rgba(11, 16, 32, 0.16);
+  --shadow-glow: 0 8px 30px var(--accent-glow);
+
+  /* Radios */
+  --r-sm: 8px;
+  --r-md: 12px;
+  --r-lg: 16px;
+  --r-xl: 22px;
+
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --bg: #070B14;
+    --bg-deep: #04060D;
+    --surface: #0F1522;
+    --surface-2: #151D2E;
+    --surface-3: #1B2438;
+    --border: #222C42;
+    --border-strong: #2E3A55;
+    --ink: #E8EDFA;
+    --ink-soft: #97A3BF;
+    --ink-faint: #6C798F;
+
+    --accent: #5B8CFF;
+    --accent-hover: #7BA3FF;
+    --accent-ink: #05122E;
+    --accent-soft: #16233F;
+    --accent-glow: rgba(91, 140, 255, 0.3);
+
+    --danger: #F0796F;
+    --danger-soft: #2C1917;
+    --warn: #E0B255;
+    --warn-soft: #2C2413;
+    --ok: #3FCFA6;
+    --ok-soft: #113028;
+    --info: #5B8CFF;
+    --info-soft: #16233F;
+    --neutral: #93A0BB;
+    --neutral-soft: #1A2334;
+
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+    --shadow-md: 0 6px 18px rgba(0, 0, 0, 0.45);
+    --shadow-lg: 0 22px 56px rgba(0, 0, 0, 0.6);
+
+    color-scheme: dark;
+  }
+}
+
+:root[data-theme='dark'] {
+  --bg: #070B14;
+  --bg-deep: #04060D;
+  --surface: #0F1522;
+  --surface-2: #151D2E;
+  --surface-3: #1B2438;
+  --border: #222C42;
+  --border-strong: #2E3A55;
+  --ink: #E8EDFA;
+  --ink-soft: #97A3BF;
+  --ink-faint: #6C798F;
+
+  --accent: #5B8CFF;
+  --accent-hover: #7BA3FF;
+  --accent-ink: #05122E;
+  --accent-soft: #16233F;
+  --accent-glow: rgba(91, 140, 255, 0.3);
+
+  --danger: #F0796F;
+  --danger-soft: #2C1917;
+  --warn: #E0B255;
+  --warn-soft: #2C2413;
+  --ok: #3FCFA6;
+  --ok-soft: #113028;
+  --info: #5B8CFF;
+  --info-soft: #16233F;
+  --neutral: #93A0BB;
+  --neutral-soft: #1A2334;
+
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 6px 18px rgba(0, 0, 0, 0.45);
+  --shadow-lg: 0 22px 56px rgba(0, 0, 0, 0.6);
+
+  color-scheme: dark;
+}

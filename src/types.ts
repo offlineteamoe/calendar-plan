@@ -1,10 +1,9 @@
-// Modelo de datos: ver "4. Esquema de datos en el Sheet maestro" en el plan.
-// Cada tipo corresponde 1:1 a una pestaña del Sheet mensual (fila 1 = encabezado,
-// nombres de columna = nombres de campo en snake_case, en ese mismo orden).
+// Modelo de datos. Cada tipo corresponde a una subcolección de Firestore
+// bajo months/{monthKey}/… — ver src/lib/store.ts y firestore.rules.
 
 export type Brand = 'OEA' | 'OEJR'
 
-// LT_EXCL_MX_AR = bucket agregado de los 18 países de LatAm que se compran como
+// LT_EXCL_MX_AR = bucket agregado de los países de LatAm que se compran como
 // un solo bloque (igual que en el Excel). MX/AR/BR se compran por separado.
 export type Country = 'MX' | 'AR' | 'BR' | 'LT_EXCL_MX_AR'
 
@@ -17,6 +16,9 @@ export const COUNTRY_LABELS: Record<Country, string> = {
   BR: 'Brasil',
   LT_EXCL_MX_AR: 'LatAm (excl. MX y AR)',
 }
+
+export const CHANNELS = ['TV', 'Digital', 'Radio', 'Otro'] as const
+export type Channel = (typeof CHANNELS)[number]
 
 export interface PlanRow {
   date: string // YYYY-MM-DD
@@ -31,7 +33,7 @@ export interface PlanRow {
 
 export interface EscenarioRow {
   scenario_id: string
-  week_start: string // YYYY-MM-DD, lunes de esa semana
+  week_start: string // lunes YYYY-MM-DD
   brand: Brand
   description: string
   weekly_spend: number
@@ -54,21 +56,26 @@ export interface RealRow {
   synced_at: string
 }
 
-export type NotaScope = 'week' | 'day' | 'brand' | 'country'
-export type NotaCategory = 'promo' | 'channel_toggle' | 'rationale' | 'general'
+/** Tipos de nota pedidos por el equipo, cada uno con su color en la UI. */
+export type NotaKind = 'pendiente' | 'cambio' | 'info' | 'otro'
+export const NOTA_KINDS: NotaKind[] = ['pendiente', 'cambio', 'info', 'otro']
 
 export interface NotaRow {
   note_id: string
-  scope: NotaScope
-  week_start: string
-  day: string // vacío si scope no es 'day'
+  kind: NotaKind
+  /** Texto original, tal como lo escribió la persona. */
+  content: string
+  /** Idioma detectado del texto original. */
+  source_lang: 'es' | 'en' | 'pt'
+  /** El mismo texto por idioma: se traduce solo al guardar (ver lib/translate.ts). */
+  text: Partial<Record<'es' | 'en' | 'pt', string>>
+  /** Fecha/hora en que se generó la nota — automática, no la elige el usuario. */
+  created_at: string // ISO
+  created_by: string
+  /** Contexto en el que se escribió (marca/país/canal visibles al guardar). */
+  scope_label: string
   brand: Brand | ''
   country: Country | ''
-  category: NotaCategory
-  content: string
-  created_by: string
-  created_at: string
-  updated_at: string
 }
 
 export interface BloqueoRow {
@@ -80,25 +87,6 @@ export interface BloqueoRow {
   created_at: string
 }
 
-export interface ResultsRow {
-  week_start: string
-  brand: Brand
-  country: Country
-  metric: string
-  value: number
-  note: string
-}
-
-export interface CreativeRow {
-  brand: Brand
-  country: Country
-  week_start: string
-  asset_name: string
-  asset_url: string
-  status: string
-  notes: string
-}
-
 /** Documento Firestore months/{month_key}. */
 export interface MonthEntry {
   month_key: string // "2026-09"
@@ -107,8 +95,30 @@ export interface MonthEntry {
   created_at: string
 }
 
-// Nombres de las subcolecciones de Firestore bajo months/{monthKey}/... — un
-// solo lugar para evitar strings mágicos repetidos por todo el código.
+/**
+ * Registro de un cambio, en months/{monthKey}/changes/{change_id}.
+ * Guarda `before`/`after` completos para poder revertir a un punto y para
+ * alimentar deshacer/rehacer y el registro de actividad.
+ */
+export interface ChangeRecord {
+  change_id: string
+  month_key: string
+  at: string // ISO
+  user_email: string
+  user_initials: string
+  /** Subcolección afectada. */
+  entity: 'plan' | 'nota' | 'escenario' | 'bloqueo'
+  doc_id: string
+  /** Qué se hizo. */
+  action: 'create' | 'update' | 'delete'
+  /** Dónde se hizo, legible: "12 sep · OEA · México · TV". */
+  where_label: string
+  before: Record<string, unknown> | null
+  after: Record<string, unknown> | null
+  reverted: boolean
+}
+
+// Nombres de las subcolecciones de Firestore bajo months/{monthKey}/…
 export const COLLECTIONS = {
   months: 'months',
   plan: 'plan',
@@ -118,4 +128,5 @@ export const COLLECTIONS = {
   nota: 'nota',
   results: 'results',
   creative: 'creative',
+  changes: 'changes',
 } as const

@@ -8,8 +8,7 @@ interface ModalProps {
   width?: number
 }
 
-/** Modal genérico centrado, con overlay — usado para crear mes, confirmar con clave, etc. */
-export function Modal({ title, onClose, children, width = 420 }: ModalProps) {
+export function Modal({ title, onClose, children, width = 440 }: ModalProps) {
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
       if (e.key === 'Escape') onClose()
@@ -19,11 +18,12 @@ export function Modal({ title, onClose, children, width = 420 }: ModalProps) {
   }, [onClose])
 
   return createPortal(
-    <div className="modal-overlay" onMouseDown={onClose}>
-      <div className="modal-card" style={{ maxWidth: width }} onMouseDown={(e) => e.stopPropagation()}>
-        <div className="modal-header">
+    <div className="overlay" onMouseDown={onClose}>
+      <div className="modal" style={{ maxWidth: width }} onMouseDown={(e) => e.stopPropagation()} role="dialog" aria-modal="true">
+        <div className="modal-top" />
+        <div className="modal-head">
           <h2>{title}</h2>
-          <button className="icon-btn modal-close" onClick={onClose} aria-label="close">
+          <button className="icon-btn" onClick={onClose} aria-label="Cerrar">
             ✕
           </button>
         </div>
