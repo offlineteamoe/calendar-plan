@@ -1014,7 +1014,7 @@
   line-height: 1.35;
   overflow: hidden;
   display: -webkit-box;
-  -webkit-line-clamp: 3;
+  -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
 }
 .week-note-foot {
@@ -1699,15 +1699,21 @@
   white-space: nowrap;
   padding: 0 1px;
 }
-.week-note-menu-panel {
-  min-width: 210px;
-  top: calc(100% + 5px);
+/* Acciones de la nota: siempre visibles y con su nombre. */
+.week-note-by {
+  font-size: 9.5px;
+  color: var(--ink-faint);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
-.week-add-btn {
-  display: inline-flex;
-  align-items: center;
+.week-note-actions {
+  display: flex;
+  flex-wrap: wrap;
   gap: 3px;
-  flex-shrink: 0;
+  margin-top: 4px;
+}
+.note-act {
   border: 1px solid var(--border-strong);
   background: var(--surface-2);
   color: var(--ink-soft);
@@ -1715,16 +1721,24 @@
   padding: 2px 8px;
   font-family: var(--font-display);
   font-size: 9.5px;
-  font-weight: 800;
-  letter-spacing: 0.03em;
-  text-transform: uppercase;
+  font-weight: 700;
   cursor: pointer;
   white-space: nowrap;
 }
-.week-add-btn:hover {
+.note-act:hover {
   border-color: var(--accent);
   color: var(--accent);
   background: var(--accent-soft);
+}
+.note-act-danger:hover {
+  border-color: var(--danger, #DC3B34);
+  color: var(--danger, #DC3B34);
+  background: color-mix(in srgb, #DC3B34 10%, transparent);
+}
+.note-act-add {
+  margin-left: auto;
+  border-color: var(--accent);
+  color: var(--accent);
 }
 
 .sr-only {

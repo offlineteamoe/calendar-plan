@@ -21,6 +21,7 @@ import {
   where,
 } from 'firebase/firestore'
 import { getDb } from './firebaseClient'
+import { pruneUndefined } from './firestoreSafe'
 import { COLLECTIONS, type ChangeRecord } from '../types'
 
 export interface ChangeAuthor {
@@ -60,8 +61,8 @@ export async function recordChange(input: RecordInput): Promise<ChangeRecord | n
     doc_id: input.docId,
     action: input.action,
     where_label: input.whereLabel,
-    before: input.before,
-    after: input.after,
+    before: pruneUndefined(input.before),
+    after: pruneUndefined(input.after),
     reverted: false,
     // Firestore rechaza `undefined`, así que estos campos solo se incluyen
     // cuando existen (los cambios viejos no los tienen y hay que tolerarlo).

@@ -24,6 +24,7 @@ import {
 } from 'firebase/firestore'
 import { getDb } from './firebaseClient'
 import { recordChange, type ChangeAuthor } from './changelog'
+import { pruneUndefined } from './firestoreSafe'
 import {
   calendarKey,
   COLLECTIONS,
@@ -66,12 +67,12 @@ function scopeKey(scope: Scope): string {
  * sin cruzar colecciones. Ver docs/DATA-MODEL.md.
  */
 function stamped<T extends object>(monthKey: string, scope: Scope, versionLetter: string, row: T): T {
-  return {
+  return pruneUndefined({
     ...row,
     month_key: monthKey,
     version_letter: versionLetter,
     country_label: COUNTRY_LABELS[scope.country],
-  }
+  })
 }
 
 // ---------------- Meses ----------------

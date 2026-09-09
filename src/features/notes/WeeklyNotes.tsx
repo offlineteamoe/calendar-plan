@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useState } from 'react'
 import { WeekGrid } from '../calendar/WeekGrid'
 import { NoteEditorModal } from './NoteEditorModal'
 import { useI18n } from '../../i18n/I18nContext'
@@ -22,80 +22,13 @@ interface Props {
   isSaving: boolean
 }
 
-/** Menú de la nota: acciones con nombre, no iconos que haya que adivinar. */
-function WeekNoteMenu({
-  note,
-  total,
-  canEditNote,
-  canDelete,
-  onEdit,
-  onHistory,
-  onDelete,
-  onDeleteWeek,
-}: {
-  note: NotaRow
-  total: number
-  canEditNote: boolean
-  canDelete: boolean
-  onEdit: () => void
-  onHistory: () => void
-  onDelete: () => void
-  onDeleteWeek: () => void
-}) {
-  const { t } = useI18n()
-  const [open, setOpen] = useState(false)
-  const ref = useRef<HTMLDivElement>(null)
-
-  useEffect(() => {
-    function onClick(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
-    }
-    document.addEventListener('mousedown', onClick)
-    return () => document.removeEventListener('mousedown', onClick)
-  }, [])
-
-  const run = (fn: () => void) => () => {
-    setOpen(false)
-    fn()
-  }
-
-  return (
-    <div className="menu-anchor week-note-menu" ref={ref}>
-      <button className="mini-btn" onClick={() => setOpen((v) => !v)} title={t('notes.actions')} aria-label={t('notes.actions')}>
-        ⋯
-      </button>
-      {open && (
-        <div className="menu-panel menu-panel-right week-note-menu-panel">
-          <button className="menu-item" onClick={run(onHistory)}>
-            {t('noteHistory.open')}
-          </button>
-          {canEditNote && (
-            <button className="menu-item" onClick={run(onEdit)}>
-              {t('notes.editTitle')}
-            </button>
-          )}
-          {canDelete && (
-            <button className="menu-item menu-item-danger" onClick={run(onDelete)}>
-              {t('notes.deleteThis')}
-            </button>
-          )}
-          {total > 1 && (
-            <button className="menu-item menu-item-danger" onClick={run(onDeleteWeek)}>
-              {t('notes.deleteWeekAll', { count: total })}
-            </button>
-          )}
-        </div>
-      )}
-      <span className="sr-only">{note.note_id}</span>
-    </div>
-  )
-}
-
 /**
  * Notas por semana, alineadas fila a fila con el calendario de la izquierda.
+ *
  * Cada semana muestra una nota a la vez, con un paginador que dice en texto
- * en cuál estás ("Nota 2 de 5") y un botón de agregar con etiqueta: en un
- * espacio tan pequeño, un icono suelto no se percibe como acción.
+ * en cuál estás ("Nota 2 de 5"), y todas las acciones a la vista con su
+ * nombre: esconderlas en un menú de tres puntos obligaba a adivinar que
+ * existían.
  */
 export function WeeklyNotes({
   weeks,
@@ -148,53 +81,64 @@ export function WeeklyNotes({
                   {t(`notes.kind.${note.kind}`)}
                 </span>
 
-                <span className="week-note-nav">
-                  {forWeek.length > 1 && (
-                    <>
-                      <button
-                        className="mini-btn"
-                        disabled={index === 0}
-                        onClick={() => move(week.weekStart, -1, forWeek.length)}
-                        title={t('notes.prev')}
-                        aria-label={t('notes.prev')}
-                      >
-                        ‹
-                      </button>
-                      <span className="week-note-count">
-                        {t('notes.counter', { index: index + 1, total: forWeek.length })}
-                      </span>
-                      <button
-                        className="mini-btn"
-                        disabled={index >= forWeek.length - 1}
-                        onClick={() => move(week.weekStart, 1, forWeek.length)}
-                        title={t('notes.next')}
-                        aria-label={t('notes.next')}
-                      >
-                        ›
-                      </button>
-                    </>
-                  )}
-                  <WeekNoteMenu
-                    note={note}
-                    total={forWeek.length}
-                    canEditNote={canEditNote(note)}
-                    canDelete={canDelete(note)}
-                    onEdit={() => onEdit(note)}
-                    onHistory={() => onHistory(note)}
-                    onDelete={() => onDelete(note)}
-                    onDeleteWeek={() => onDeleteWeek(week.weekStart, forWeek)}
-                  />
-                </span>
+                {forWeek.length > 1 && (
+                  <span className="week-note-nav">
+                    <button
+                      className="mini-btn"
+                      disabled={index === 0}
+                      onClick={() => move(week.weekStart, -1, forWeek.length)}
+                      title={t('notes.prev')}
+                      aria-label={t('notes.prev')}
+                    >
+                      ‹
+                    </button>
+                    <span className="week-note-count">
+                      {t('notes.counter', { index: index + 1, total: forWeek.length })}
+                    </span>
+                    <button
+                      className="mini-btn"
+                      disabled={index >= forWeek.length - 1}
+                      onClick={() => move(week.weekStart, 1, forWeek.length)}
+                      title={t('notes.next')}
+                      aria-label={t('notes.next')}
+                    >
+                      ›
+                    </button>
+                  </span>
+                )}
               </div>
 
               <p className="week-note-text">{pickNoteText(note.text, note.content, locale)}</p>
 
-              <div className="week-note-foot">
-                <span className="week-note-by">
-                  {note.created_by.split('@')[0]} · {formatDateTime(note.created_at, locale)}
-                  {note.updated_at && ` · ${t('notes.edited')}`}
-                </span>
-                <button className="week-add-btn" onClick={() => setComposerWeek(week.weekStart)}>
+              <div className="week-note-by">
+                {note.created_by.split('@')[0]} · {formatDateTime(note.created_at, locale)}
+                {note.updated_at && ` · ${t('notes.edited')}`}
+              </div>
+
+              <div className="week-note-actions">
+                <button className="note-act" onClick={() => onHistory(note)}>
+                  {t('noteHistory.open')}
+                </button>
+                {canEditNote(note) && (
+                  <button className="note-act" onClick={() => onEdit(note)}>
+                    {t('notes.edit')}
+                  </button>
+                )}
+                {canDelete(note) && (
+                  <button className="note-act note-act-danger" onClick={() => onDelete(note)}>
+                    {t('common.delete')}
+                  </button>
+                )}
+                {forWeek.length > 1 && (
+                  <button
+                    className="note-act note-act-danger"
+                    onClick={() => onDeleteWeek(week.weekStart, forWeek)}
+                    title={t('notes.deleteWeekAll', { count: forWeek.length })}
+                  >
+                    {t('notes.deleteAllShort', { count: forWeek.length })}
+                  </button>
+                )}
+                <button className="note-act note-act-add" onClick={() => setComposerWeek(week.weekStart)}>
                   + {t('notes.addForWeek')}
                 </button>
               </div>

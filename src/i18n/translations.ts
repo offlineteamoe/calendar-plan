@@ -226,6 +226,8 @@ export const translations: Record<Locale, Record<string, string>> = {
     'notes.deleteWeekConfirmBtn': 'Eliminar las {{count}}',
     'logs.deniedTitle': 'Solo para administradores',
     'logs.deniedBody': 'El registro de actividad completo lo pueden ver unicamente las cuentas administradoras.',
+    'notes.edit': 'Editar',
+    'notes.deleteAllShort': 'Borrar las {{count}}',
   },
 
   en: {
@@ -441,6 +443,8 @@ export const translations: Record<Locale, Record<string, string>> = {
     'notes.deleteWeekConfirmBtn': 'Delete all {{count}}',
     'logs.deniedTitle': 'Admins only',
     'logs.deniedBody': 'The full activity log is visible to administrator accounts only.',
+    'notes.edit': 'Edit',
+    'notes.deleteAllShort': 'Delete all {{count}}',
   },
 
   pt: {
@@ -656,5 +660,7 @@ export const translations: Record<Locale, Record<string, string>> = {
     'notes.deleteWeekConfirmBtn': 'Excluir as {{count}}',
     'logs.deniedTitle': 'Apenas administradores',
     'logs.deniedBody': 'O registro de atividade completo e visivel apenas para contas administradoras.',
+    'notes.edit': 'Editar',
+    'notes.deleteAllShort': 'Excluir as {{count}}',
   },
 }
