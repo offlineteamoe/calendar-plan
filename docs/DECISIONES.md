@@ -111,3 +111,27 @@ objetivo declarado es conectar más adelante un MCP que responda preguntas sobre
 un mes concreto, y una fila que se explica sola no obliga a cruzar colecciones.
 La colección `changes` —que nunca se edita ni se borra— es la que guarda el
 *por qué*, no solo el estado final.
+
+
+## El latido de presencia es la escritura cara
+
+Mostrar "quién está conectado" cuesta una escritura por persona y por latido,
+y es con diferencia lo que más escribe la aplicación. Con un latido cada 30
+segundos, 10 personas y una jornada de 8 horas eran ~9.600 escrituras al día:
+la mitad del cupo gratuito diario, gastada en pintar avatares. Y una pestaña
+olvidada en segundo plano escribía exactamente igual que alguien trabajando.
+
+Ahora late cada minuto y **solo mientras la pestaña está visible**. El precio
+es que alguien puede tardar hasta ~2,5 minutos en desaparecer de la lista, que
+para saber quién está trabajando en el mes no importa.
+
+Si alguna vez hay que añadir otra señal periódica, este es el presupuesto
+contra el que hay que medirla.
+
+## Lo que el plan gratuito no da: copias de seguridad
+
+El plan Spark no tiene copias automáticas ni recuperación a un punto en el
+tiempo. Si se elimina un mes, Google no lo puede devolver. Hoy lo contienen
+tres cosas: solo los administradores pueden borrar, hay confirmación explícita,
+y el borrado queda registrado en `months/_global/changes`. Nada de eso es un
+respaldo. Pendiente: una exportación periódica de las colecciones.

@@ -10,11 +10,22 @@ import { useEffect, useRef, useState } from 'react'
 import { collection, deleteDoc, doc, onSnapshot, serverTimestamp, setDoc, Timestamp } from 'firebase/firestore'
 import { getDb } from '../lib/firebaseClient'
 
-const HEARTBEAT_MS = 30_000
-// Cualquier doc con lastSeen más viejo que esto se considera "ya no está":
-// más margen que el intervalo de heartbeat para tolerar una pestaña en
-// segundo plano o una red lenta puntual.
-const STALE_AFTER_MS = 45_000
+// El latido es la escritura más frecuente de toda la app, y por lejos: con
+// 10 personas y jornada de 8 horas, un latido cada 30 s son ~9.600
+// escrituras diarias solo para pintar avatares — la mitad del cupo gratuito
+// diario. Dos decisiones lo bajan a una fracción de eso:
+//
+//   · un minuto entre latidos en vez de medio,
+//   · y ninguno mientras la pestaña esté en segundo plano, que es donde se
+//     iba la mayor parte (una pestaña olvidada toda la tarde latía igual que
+//     alguien trabajando).
+//
+// El precio es que alguien puede tardar hasta ~2,5 minutos en desaparecer de
+// la lista. Para saber quién está trabajando en el mes es de sobra.
+const HEARTBEAT_MS = 60_000
+// Margen generoso sobre el latido: tolera una red lenta puntual y el momento
+// en que una pestaña vuelve a primer plano.
+const STALE_AFTER_MS = 150_000
 
 export interface PresenceUser {
   uid: string
@@ -87,8 +98,26 @@ export function usePresence(monthKey: string | null, me: PresenceMe | null, curr
         lastSeen: serverTimestamp(),
       })
 
-    beat()
-    const interval = setInterval(beat, HEARTBEAT_MS)
+    // Solo late si la pestaña está visible. Al volver a primer plano se late
+    // de inmediato para no aparecer como ausente mientras llega el siguiente
+    // ciclo.
+    let interval: ReturnType<typeof setInterval> | null = null
+
+    const start = () => {
+      if (interval) return
+      beat()
+      interval = setInterval(beat, HEARTBEAT_MS)
+    }
+    const stop = () => {
+      if (!interval) return
+      clearInterval(interval)
+      interval = null
+    }
+
+    const onVisibility = () => (document.visibilityState === 'visible' ? start() : stop())
+
+    if (document.visibilityState === 'visible') start()
+    document.addEventListener('visibilitychange', onVisibility)
 
     const handleBeforeUnload = () => {
       void deleteDoc(ref)
@@ -96,7 +125,8 @@ export function usePresence(monthKey: string | null, me: PresenceMe | null, curr
     window.addEventListener('beforeunload', handleBeforeUnload)
 
     return () => {
-      clearInterval(interval)
+      stop()
+      document.removeEventListener('visibilitychange', onVisibility)
       window.removeEventListener('beforeunload', handleBeforeUnload)
       void deleteDoc(ref)
     }
