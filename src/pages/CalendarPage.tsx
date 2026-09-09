@@ -11,10 +11,20 @@ import { useVersions } from '../hooks/useVersions'
 import { AppHeader } from '../components/AppHeader'
 import { CalendarGrid } from '../features/calendar/CalendarGrid'
 import { CalendarScopeBar } from '../features/calendar/CalendarScopeBar'
+import { VersionMetaModal } from '../features/calendar/VersionMetaModal'
+import { PasswordConfirmModal } from '../components/PasswordConfirmModal'
 import { FiltersPanel } from '../features/calendar/FiltersPanel'
 import { SidePanel } from '../features/calendar/SidePanel'
 import { applyChangeState } from '../lib/changelog'
-import { createVersionFrom, getMonth, setVersionStatus, type Scope } from '../lib/store'
+import {
+  createVersionFrom,
+  deleteVersion,
+  getMonth,
+  setVersionStatus,
+  updateVersionMeta,
+  versionLabel,
+  type Scope,
+} from '../lib/store'
 import { getMonthWeeks } from '../lib/dateUtils'
 import {
   BRANDS,
@@ -45,6 +55,11 @@ export function CalendarPage() {
   const [versionId, setVersionId] = useState<string | null>(null)
   const [latamView, setLatamView] = useState(false)
   const [mobileTab, setMobileTab] = useState<MobileTab>('calendar')
+  // Crear una versión pide nombre y descripción antes de copiarla; editar y
+  // eliminar actúan sobre la que se elija en el menú, no solo sobre la abierta.
+  const [creatingVersion, setCreatingVersion] = useState(false)
+  const [editingVersion, setEditingVersion] = useState<VersionEntry | null>(null)
+  const [deletingVersion, setDeletingVersion] = useState<VersionEntry | null>(null)
   const [collapsed, setCollapsed] = useState(false)
 
   const monthQuery = useQuery({ queryKey: ['month', monthKey], queryFn: () => getMonth(monthKey), enabled: !!monthKey })
@@ -124,15 +139,35 @@ export function CalendarPage() {
   })
 
   const newVersionMutation = useMutation({
-    mutationFn: () => {
+    mutationFn: (meta: { name: string; description: string }) => {
       if (!version) throw new Error('sin version')
-      return createVersionFrom(monthKey, version, author)
+      return createVersionFrom(monthKey, version, author, meta)
     },
     onSuccess: (created) => {
+      setCreatingVersion(false)
       setVersionId(created.version_id)
       refreshData()
     },
   })
+
+  const editVersionMutation = useMutation({
+    mutationFn: (input: { version: VersionEntry; meta: { name: string; description: string } }) =>
+      updateVersionMeta(monthKey, input.version, input.meta, author),
+    onSuccess: () => setEditingVersion(null),
+  })
+
+  const deleteVersionMutation = useMutation({
+    mutationFn: (target: VersionEntry) => deleteVersion(monthKey, target, author),
+    onSuccess: (_data, target) => {
+      setDeletingVersion(null)
+      // Si borraste la que tenías abierta, cae en la primera que quede.
+      if (target.version_id === versionId) setVersionId(null)
+      refreshData()
+    },
+  })
+
+  const nextLetter =
+    'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('').find((l) => !versions.some((v) => v.letter === l)) ?? '?'
 
   if (monthQuery.isSuccess && !monthQuery.data) {
     return (
@@ -205,7 +240,9 @@ export function CalendarPage() {
                   status={status}
                   onSelectVersion={(v) => setVersionId(v.version_id)}
                   onToggleStatus={() => statusMutation.mutate()}
-                  onCreateVersion={() => newVersionMutation.mutate()}
+                  onCreateVersion={() => setCreatingVersion(true)}
+                  onEditVersion={(v) => setEditingVersion(v)}
+                  onDeleteVersion={(v) => setDeletingVersion(v)}
                   creatingVersion={newVersionMutation.isPending}
                   latamView={latamView}
                   onToggleLatamView={() => setLatamView((v) => !v)}
@@ -240,6 +277,41 @@ export function CalendarPage() {
           )}
         </div>
       </div>
+
+      {creatingVersion && version && (
+        <VersionMetaModal
+          letter={nextLetter}
+          copiedFrom={version.letter}
+          isPending={newVersionMutation.isPending}
+          errorMessage={newVersionMutation.isError ? (newVersionMutation.error as Error).message : undefined}
+          onSubmit={(meta) => newVersionMutation.mutate(meta)}
+          onClose={() => setCreatingVersion(false)}
+        />
+      )}
+
+      {editingVersion && (
+        <VersionMetaModal
+          letter={editingVersion.letter}
+          initialName={editingVersion.name ?? ''}
+          initialDescription={editingVersion.description ?? ''}
+          isPending={editVersionMutation.isPending}
+          errorMessage={editVersionMutation.isError ? (editVersionMutation.error as Error).message : undefined}
+          onSubmit={(meta) => editVersionMutation.mutate({ version: editingVersion, meta })}
+          onClose={() => setEditingVersion(null)}
+        />
+      )}
+
+      {deletingVersion && (
+        <PasswordConfirmModal
+          title={t('version.deleteTitle', { letter: deletingVersion.letter })}
+          warning={t('version.deleteWarning', { version: versionLabel(deletingVersion) })}
+          confirmLabel={t('common.delete')}
+          isPending={deleteVersionMutation.isPending}
+          errorMessage={deleteVersionMutation.isError ? (deleteVersionMutation.error as Error).message : undefined}
+          onConfirmed={() => deleteVersionMutation.mutate(deletingVersion)}
+          onClose={() => setDeletingVersion(null)}
+        />
+      )}
     </div>
   )
 }

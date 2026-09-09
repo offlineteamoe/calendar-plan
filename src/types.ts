@@ -37,6 +37,10 @@ export interface VersionEntry {
   version_id: string
   /** Letra visible: A, B, C… */
   letter: string
+  /** Nombre corto que le da el equipo ("Plan agresivo TV"). Opcional. */
+  name?: string
+  /** Para qué es esta versión y en qué se diferencia de las demás. */
+  description?: string
   /** Estado por defecto de la versión (el de un calendario sin estado propio). */
   status: VersionStatus
   /**

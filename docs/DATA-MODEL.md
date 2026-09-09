@@ -60,10 +60,16 @@ que nunca queda desactualizado.
 | Campo | Tipo | Notas |
 |---|---|---|
 | `version_id`, `letter` | string | `A`, `B`, … |
+| `name` | string | nombre corto del equipo ("Plan agresivo TV"); opcional |
+| `description` | string | para qué es y en qué se diferencia; opcional |
 | `status` | `maybe` \| `approved` | estado por defecto de la versión |
 | `scope_status` | mapa | clave `{brand}_{country}` → `maybe` \| `approved` |
 | `copied_from` | string \| null | letra de origen |
 | `created_by`, `created_at` | string | |
+
+Eliminar una versión borra también todo su contenido (plan, notas, escenarios,
+resultados y creativos de todas las marcas y regiones) y exige la contraseña
+compartida del equipo. La última versión de un mes no se puede eliminar.
 
 La aprobación es **por calendario**, no por versión: aprobar OEA/México no
 aprueba OEJR/Argentina. `scope_status` guarda esa decisión por separado y

@@ -237,6 +237,83 @@ export async function listVersionsByMonth(): Promise<Map<string, VersionEntry[]>
   return byMonth
 }
 
+/** Cómo se nombra una versión en un texto: su nombre si lo tiene, o la letra. */
+export function versionLabel(version: VersionEntry): string {
+  return version.name?.trim() ? `${version.letter} · ${version.name.trim()}` : version.letter
+}
+
+/** Cambia el nombre y la descripción de una versión, sin tocar nada más. */
+export async function updateVersionMeta(
+  monthKey: string,
+  version: VersionEntry,
+  meta: { name: string; description: string },
+  author: ChangeAuthor,
+): Promise<void> {
+  const next: VersionEntry = { ...version, name: meta.name.trim(), description: meta.description.trim() }
+  await setDoc(doc(getDb(), COLLECTIONS.months, monthKey, COLLECTIONS.versions, version.version_id), next)
+  await recordChange({
+    monthKey,
+    entity: 'version',
+    docId: version.version_id,
+    action: 'update',
+    whereLabel: versionLabel(next),
+    placeKey: 'place.calendar',
+    summaryKey: 'ev.version.rename',
+    summaryParams: { version: versionLabel(next) },
+    before: version as unknown as Record<string, unknown>,
+    after: next as unknown as Record<string, unknown>,
+    author,
+  })
+}
+
+/**
+ * Elimina una versión y TODO su contenido: plan, notas, escenarios,
+ * resultados y creativos de todas las marcas y regiones. No se puede borrar
+ * la última que queda — un mes sin ninguna versión no tendría dónde planificar.
+ */
+export async function deleteVersion(
+  monthKey: string,
+  version: VersionEntry,
+  author: ChangeAuthor,
+): Promise<void> {
+  const db = getDb()
+  const existing = await listVersions(monthKey)
+  if (existing.length <= 1) throw new Error('No se puede eliminar la única versión del mes.')
+
+  const scoped = [
+    COLLECTIONS.plan,
+    COLLECTIONS.nota,
+    COLLECTIONS.escenario,
+    COLLECTIONS.results,
+    COLLECTIONS.creative,
+    COLLECTIONS.bloqueo,
+  ]
+  for (const name of scoped) {
+    const snapshot = await getDocs(query(subCol(db, monthKey, name), where('version_id', '==', version.version_id)))
+    if (snapshot.empty) continue
+    for (let i = 0; i < snapshot.docs.length; i += 450) {
+      const batch = writeBatch(db)
+      snapshot.docs.slice(i, i + 450).forEach((d) => batch.delete(d.ref))
+      await batch.commit()
+    }
+  }
+  await deleteDoc(doc(db, COLLECTIONS.months, monthKey, COLLECTIONS.versions, version.version_id))
+
+  await recordChange({
+    monthKey,
+    entity: 'version',
+    docId: version.version_id,
+    action: 'delete',
+    whereLabel: versionLabel(version),
+    placeKey: 'place.calendar',
+    summaryKey: 'ev.version.delete',
+    summaryParams: { version: versionLabel(version) },
+    before: version as unknown as Record<string, unknown>,
+    after: null,
+    author,
+  })
+}
+
 /**
  * Crea la siguiente versión (A → B → C…) copiando TODO lo de la versión de
  * origen: plan, notas, escenarios, resultados y creativos, de todas las
@@ -246,6 +323,7 @@ export async function createVersionFrom(
   monthKey: string,
   source: VersionEntry,
   author: ChangeAuthor,
+  meta: { name: string; description: string } = { name: '', description: '' },
 ): Promise<VersionEntry> {
   const db = getDb()
   const existing = await listVersions(monthKey)
@@ -256,6 +334,8 @@ export async function createVersionFrom(
   const version: VersionEntry = {
     version_id: letter,
     letter,
+    name: meta.name.trim(),
+    description: meta.description.trim(),
     status: 'maybe',
     created_by: author.email,
     created_at: new Date().toISOString(),
@@ -290,7 +370,7 @@ export async function createVersionFrom(
     whereLabel: `${letter} (copiada de ${source.letter})`,
     placeKey: 'place.calendar',
     summaryKey: 'ev.version.create',
-    summaryParams: { version: letter, from: source.letter },
+    summaryParams: { version: versionLabel(version), from: source.letter },
     before: null,
     after: version as unknown as Record<string, unknown>,
     author,

@@ -1863,3 +1863,128 @@
   font-weight: 700;
   color: var(--ink);
 }
+
+
+/* ============ Versiones: nombre, descripción y acciones ============ */
+
+.version-anchor {
+  position: relative;
+}
+.version-chip-name {
+  max-width: 190px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Tarjeta al pasar el cursor: para qué es esta versión, sin abrir nada. */
+.version-card {
+  position: absolute;
+  top: calc(100% + 10px);
+  left: 0;
+  z-index: 40;
+  width: 270px;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  padding: 12px 14px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow-lg, 0 18px 40px rgba(15, 23, 42, 0.16));
+  opacity: 0;
+  transform: translateY(-4px);
+  pointer-events: none;
+  transition: opacity 0.14s ease, transform 0.14s ease;
+}
+.version-anchor:hover .version-card {
+  opacity: 1;
+  transform: translateY(0);
+  transition-delay: 0.25s;
+}
+.version-card-top {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+.version-card-name {
+  font-family: var(--font-display);
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.version-card-desc {
+  font-size: 12.5px;
+  line-height: 1.45;
+  color: var(--ink-soft);
+  overflow-wrap: anywhere;
+}
+.version-card-foot {
+  font-size: 10.5px;
+  color: var(--ink-faint);
+  overflow-wrap: anywhere;
+}
+
+.version-menu {
+  left: 0;
+  right: auto;
+  min-width: 300px;
+}
+.version-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding-right: 8px;
+}
+.version-row:hover {
+  background: var(--surface-2);
+}
+.version-row.is-active {
+  background: var(--accent-soft);
+}
+.version-row-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  border: none;
+  background: none;
+  padding: 8px 10px;
+  cursor: pointer;
+  text-align: left;
+  color: var(--ink);
+}
+.version-row-text {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.version-row-name {
+  font-family: var(--font-display);
+  font-size: 12.5px;
+  font-weight: 700;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.version-row-desc {
+  font-size: 11px;
+  color: var(--ink-faint);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.version-row-actions {
+  display: flex;
+  gap: 2px;
+  flex-shrink: 0;
+}
+.mini-btn-danger:hover:not(:disabled) {
+  background: color-mix(in srgb, #DC3B34 14%, transparent);
+  color: #DC3B34;
+}

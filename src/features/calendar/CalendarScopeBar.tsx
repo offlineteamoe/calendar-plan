@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { COUNTRY_LABELS, type Brand, type Country, type VersionEntry, type VersionStatus } from '../../types'
 import { useI18n } from '../../i18n/I18nContext'
 import { useRole } from '../../hooks/useRole'
+import { formatDateTime } from '../../lib/dateUtils'
 
 interface Props {
   brand: Brand
@@ -15,16 +16,37 @@ interface Props {
   onSelectVersion: (v: VersionEntry) => void
   onToggleStatus: () => void
   onCreateVersion: () => void
+  onEditVersion: (v: VersionEntry) => void
+  onDeleteVersion: (v: VersionEntry) => void
   creatingVersion: boolean
   latamView: boolean
   onToggleLatamView: () => void
   latamAvailable: boolean
 }
 
+/** Tarjeta que explica una versión al pasar el cursor por encima. */
+function VersionCard({ version }: { version: VersionEntry }) {
+  const { t, locale } = useI18n()
+  return (
+    <span className="version-card">
+      <span className="version-card-top">
+        <span className="version-letter">{version.letter}</span>
+        <span className="version-card-name">{version.name?.trim() || t('version.unnamed', { letter: version.letter })}</span>
+      </span>
+      <span className="version-card-desc">{version.description?.trim() || t('version.noDescription')}</span>
+      <span className="version-card-foot">
+        {version.created_by ? version.created_by.split('@')[0] : '—'}
+        {version.created_at && ` · ${formatDateTime(version.created_at, locale)}`}
+        {version.copied_from && ` · ${t('version.copiedFrom', { from: version.copied_from })}`}
+      </span>
+    </span>
+  )
+}
+
 /**
  * Barra superior del calendario: deja claro QUÉ calendario se está viendo
- * (versión, marca, región), su estado (maybe/aprobado), permite cambiar de
- * versión, crear una nueva y encender la vista agregada de LATAM.
+ * (versión, marca, región, canal), su estado, y permite cambiar de versión,
+ * crear una nueva, renombrarla o eliminarla.
  */
 export function CalendarScopeBar({
   brand,
@@ -36,6 +58,8 @@ export function CalendarScopeBar({
   onSelectVersion,
   onToggleStatus,
   onCreateVersion,
+  onEditVersion,
+  onDeleteVersion,
   creatingVersion,
   latamView,
   onToggleLatamView,
@@ -54,32 +78,71 @@ export function CalendarScopeBar({
     return () => document.removeEventListener('mousedown', onClick)
   }, [])
 
+  const nameOf = (v: VersionEntry) => v.name?.trim() || t('version.unnamed', { letter: v.letter })
+
   return (
     <div className="scope-bar aligned-head">
       <div className="scope-bar-left">
-        <div className="menu-anchor" ref={ref}>
+        <div className="menu-anchor version-anchor" ref={ref}>
           <button className="version-chip" onClick={() => setOpen((v) => !v)} title={t('version.switch')}>
             <span className="version-letter">{version.letter}</span>
-            {t('version.label')}
+            <span className="version-chip-name">{nameOf(version)}</span>
             <span className="version-caret">▾</span>
           </button>
+          {!open && <VersionCard version={version} />}
+
           {open && (
-            <div className="menu-panel" style={{ left: 0, right: 'auto', minWidth: 230 }}>
+            <div className="menu-panel version-menu">
               <div className="menu-head">
                 <h3>{t('version.switch')}</h3>
               </div>
               {versions.map((v) => (
-                <button
-                  key={v.version_id}
-                  className={`menu-item ${v.version_id === version.version_id ? 'menu-item-active' : ''}`}
-                  onClick={() => {
-                    onSelectVersion(v)
-                    setOpen(false)
-                  }}
-                >
-                  <span className="version-letter">{v.letter}</span>
-                  <span className="menu-item-label">{t('version.label')} {v.letter}</span>
-                </button>
+                <div className={`version-row ${v.version_id === version.version_id ? 'is-active' : ''}`} key={v.version_id}>
+                  <button
+                    className="version-row-main"
+                    onClick={() => {
+                      onSelectVersion(v)
+                      setOpen(false)
+                    }}
+                  >
+                    <span className="version-letter">{v.letter}</span>
+                    <span className="version-row-text">
+                      <span className="version-row-name">{nameOf(v)}</span>
+                      {v.description?.trim() && <span className="version-row-desc">{v.description.trim()}</span>}
+                    </span>
+                  </button>
+                  {canEdit && (
+                    <span className="version-row-actions">
+                      <button
+                        className="mini-btn"
+                        title={t('version.editTitle', { letter: v.letter })}
+                        aria-label={t('version.editTitle', { letter: v.letter })}
+                        onClick={() => {
+                          setOpen(false)
+                          onEditVersion(v)
+                        }}
+                      >
+                        ✎
+                      </button>
+                      <button
+                        className="mini-btn mini-btn-danger"
+                        disabled={versions.length <= 1}
+                        title={
+                          versions.length <= 1
+                            ? t('version.deleteLast')
+                            : t('version.deleteTitle', { letter: v.letter })
+                        }
+                        aria-label={t('version.deleteTitle', { letter: v.letter })}
+                        onClick={() => {
+                          setOpen(false)
+                          onDeleteVersion(v)
+                        }}
+                      >
+                        ✕
+                      </button>
+                    </span>
+                  )}
+                </div>
               ))}
               {canEdit && (
                 <button
