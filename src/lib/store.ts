@@ -390,12 +390,19 @@ function normalizeNota(raw: Record<string, unknown>, versionId: string): NotaRow
     created_at: String(raw.created_at ?? new Date(0).toISOString()),
     created_by: String(raw.created_by ?? ''),
     created_by_role: raw.created_by_role === 'viewer' ? 'viewer' : 'admin',
+    updated_at: raw.updated_at ? String(raw.updated_at) : undefined,
+    updated_by: raw.updated_by ? String(raw.updated_by) : undefined,
     scope_label: String(raw.scope_label ?? ''),
     month_key: raw.month_key ? String(raw.month_key) : undefined,
     version_letter: raw.version_letter ? String(raw.version_letter) : undefined,
     country_label: raw.country_label ? String(raw.country_label) : undefined,
     week_label: raw.week_label ? String(raw.week_label) : undefined,
   }
+}
+
+/** Id del documento de una nota: el alcance va adelante, el uuid al final. */
+export function notaDocId(scope: Scope, noteId: string): string {
+  return `${scopeKey(scope)}_${noteId}`
 }
 
 export async function addNota(
@@ -405,7 +412,7 @@ export async function addNota(
   row: NotaRow,
   author: ChangeAuthor,
 ): Promise<void> {
-  const id = `${scopeKey(scope)}_${row.note_id}`
+  const id = notaDocId(scope, row.note_id)
   await setDoc(doc(getDb(), COLLECTIONS.months, monthKey, COLLECTIONS.nota, id), stamped(monthKey, scope, versionLetter, row))
   await recordChange({
     monthKey,
@@ -419,6 +426,45 @@ export async function addNota(
   })
 }
 
+/**
+ * Edita una nota conservando su identidad (mismo `note_id`, mismo documento,
+ * misma fecha de creación y mismo autor). Lo que cambia queda en el historial
+ * con el estado anterior completo, que es lo que permite ver después qué
+ * decía la nota antes de esta edición y quién la tocó.
+ */
+export async function updateNota(
+  monthKey: string,
+  scope: Scope,
+  versionLetter: string,
+  before: NotaRow,
+  after: NotaRow,
+  author: ChangeAuthor,
+): Promise<NotaRow> {
+  const id = notaDocId(scope, before.note_id)
+  const next: NotaRow = {
+    ...after,
+    note_id: before.note_id,
+    created_at: before.created_at,
+    created_by: before.created_by,
+    created_by_role: before.created_by_role,
+    updated_at: new Date().toISOString(),
+    updated_by: author.email,
+  }
+  const stampedRow = stamped(monthKey, scope, versionLetter, next)
+  await setDoc(doc(getDb(), COLLECTIONS.months, monthKey, COLLECTIONS.nota, id), stampedRow)
+  await recordChange({
+    monthKey,
+    entity: 'nota',
+    docId: id,
+    action: 'update',
+    whereLabel: scopeLabel(scope, versionLetter, before.scope === 'week' ? before.week_start : 'general'),
+    before: before as unknown as Record<string, unknown>,
+    after: stampedRow as unknown as Record<string, unknown>,
+    author,
+  })
+  return next
+}
+
 export async function deleteNota(
   monthKey: string,
   scope: Scope,
@@ -426,7 +472,7 @@ export async function deleteNota(
   row: NotaRow,
   author: ChangeAuthor,
 ): Promise<void> {
-  const id = `${scopeKey(scope)}_${row.note_id}`
+  const id = notaDocId(scope, row.note_id)
   await deleteDoc(doc(getDb(), COLLECTIONS.months, monthKey, COLLECTIONS.nota, id))
   await recordChange({
     monthKey,
@@ -446,7 +492,7 @@ export async function setNotaTranslations(
   noteId: string,
   row: NotaRow,
 ): Promise<void> {
-  await updateDoc(doc(getDb(), COLLECTIONS.months, monthKey, COLLECTIONS.nota, `${scopeKey(scope)}_${noteId}`), {
+  await updateDoc(doc(getDb(), COLLECTIONS.months, monthKey, COLLECTIONS.nota, notaDocId(scope, noteId)), {
     text: row.text,
     source_lang: row.source_lang,
   })

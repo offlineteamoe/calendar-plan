@@ -96,10 +96,28 @@ La inversión planificada, **un documento por día y canal**.
 | `created_at` | string | automático; nadie elige la fecha |
 | `created_by` | string | email |
 | `created_by_role` | `admin` \| `viewer` | rol en el momento de escribirla |
+| `updated_at`, `updated_by` | string | última edición; el detalle está en `changes` |
 | `scope_label` | string | `A · OEA · México` |
 
 `observacion` es la categoría exclusiva de los usuarios de consulta: es la
 única que pueden crear, y la ven ellos y los administradores.
+
+**Editar una nota nunca crea una nota nueva.** Se conserva el mismo
+`note_id`, el mismo documento, el mismo `created_by` y el mismo `created_at`
+—las reglas de seguridad lo exigen— y solo cambian el contenido, la categoría
+y `updated_at`/`updated_by`. Cada edición deja una entrada en `changes` con el
+estado completo anterior, que es exactamente lo que muestra el botón de
+historial de cada nota: quién, cuándo, qué decía antes y qué dice ahora.
+
+Quién puede editar qué:
+
+| Nota escrita por | La puede editar |
+|---|---|
+| Un administrador | Cualquier administrador |
+| Un usuario de consulta (`observacion`) | Solo quien la escribió |
+
+Borrar es distinto de editar: un administrador puede borrar cualquier nota,
+pero no puede reescribir en silencio lo que dijo otra persona.
 
 ### `months/{month_key}/escenario/{version}_{brand}_{country}_{scenario_id}`
 

@@ -165,6 +165,9 @@ export interface NotaRow {
   created_by: string
   /** Rol de quien la escribió al momento de escribirla. */
   created_by_role?: 'admin' | 'viewer'
+  /** Última edición. El historial completo vive en la colección `changes`. */
+  updated_at?: string
+  updated_by?: string
   scope_label: string
   month_key?: string
   version_letter?: string

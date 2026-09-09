@@ -90,6 +90,21 @@ export async function listMyChanges(monthKey: string, email: string, max = 60): 
 }
 
 /**
+ * Historial de UN documento concreto — el que se muestra al pulsar el botón
+ * de historial de una nota.
+ *
+ * Se consulta solo por `doc_id` y se ordena en el cliente a propósito:
+ * combinar `where` con `orderBy` sobre campos distintos obligaría a crear un
+ * índice compuesto a mano en la consola de Firebase, y un historial de una
+ * nota son unas pocas entradas.
+ */
+export async function listChangesForDoc(monthKey: string, docId: string): Promise<ChangeRecord[]> {
+  const ref = collection(getDb(), COLLECTIONS.months, monthKey, COLLECTIONS.changes)
+  const snap = await getDocs(query(ref, where('doc_id', '==', docId)))
+  return snap.docs.map((d) => d.data() as ChangeRecord).sort((a, b) => (a.at < b.at ? 1 : -1))
+}
+
+/**
  * Aplica el estado `before` de un cambio (volver a ese punto) o el `after`
  * (rehacer). Devuelve el ChangeRecord nuevo que deja constancia de la vuelta
  * atrás, para que el historial no pierda el rastro.

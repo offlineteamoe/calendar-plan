@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { WeekGrid } from '../calendar/WeekGrid'
-import { Modal } from '../../components/Modal'
+import { NoteEditorModal } from './NoteEditorModal'
 import { useI18n } from '../../i18n/I18nContext'
 import { formatDateTime, type CalendarWeek } from '../../lib/dateUtils'
 import { pickNoteText } from '../../lib/translate'
@@ -11,8 +11,11 @@ interface Props {
   notes: NotaRow[]
   /** Categorías que esta persona puede crear (depende de su rol). */
   kinds: NotaKind[]
+  canEditNote: (note: NotaRow) => boolean
   canDelete: (note: NotaRow) => boolean
   onAdd: (weekStart: string, kind: NotaKind, content: string) => void
+  onEdit: (note: NotaRow) => void
+  onHistory: (note: NotaRow) => void
   onDelete: (note: NotaRow) => void
   isSaving: boolean
 }
@@ -22,25 +25,27 @@ interface Props {
  * Cada semana muestra una nota a la vez (la más reciente primero) con flechas
  * para recorrerlas y el contador "2 / 5".
  */
-export function WeeklyNotes({ weeks, notes, kinds, canDelete, onAdd, onDelete, isSaving }: Props) {
+export function WeeklyNotes({
+  weeks,
+  notes,
+  kinds,
+  canEditNote,
+  canDelete,
+  onAdd,
+  onEdit,
+  onHistory,
+  onDelete,
+  isSaving,
+}: Props) {
   const { t, locale } = useI18n()
   const [cursor, setCursor] = useState<Record<string, number>>({})
   const [composerWeek, setComposerWeek] = useState<string | null>(null)
-  const [kind, setKind] = useState<NotaKind>(kinds[0])
-  const [content, setContent] = useState('')
 
   const move = (weekStart: string, delta: number, total: number) => {
     setCursor((prev) => {
       const next = (prev[weekStart] ?? 0) + delta
       return { ...prev, [weekStart]: Math.max(0, Math.min(total - 1, next)) }
     })
-  }
-
-  const submit = () => {
-    if (!composerWeek || !content.trim()) return
-    onAdd(composerWeek, kind, content.trim())
-    setContent('')
-    setComposerWeek(null)
   }
 
   return (
@@ -92,14 +97,25 @@ export function WeeklyNotes({ weeks, notes, kinds, canDelete, onAdd, onDelete, i
               </div>
               <p className="week-note-text">{pickNoteText(note.text, note.content, locale)}</p>
               <div className="week-note-foot">
-                <span>
+                <span className="week-note-by">
                   {note.created_by.split('@')[0]} · {formatDateTime(note.created_at, locale)}
+                  {note.updated_at && ` · ${t('notes.edited')}`}
                 </span>
-                {canDelete(note) && (
-                  <button className="mini-btn" onClick={() => onDelete(note)} aria-label="delete">
-                    ✕
+                <span className="week-note-actions">
+                  <button className="mini-btn" onClick={() => onHistory(note)} title={t('noteHistory.open')}>
+                    ⟲
                   </button>
-                )}
+                  {canEditNote(note) && (
+                    <button className="mini-btn" onClick={() => onEdit(note)} title={t('notes.editTitle')}>
+                      ✎
+                    </button>
+                  )}
+                  {canDelete(note) && (
+                    <button className="mini-btn" onClick={() => onDelete(note)} title={t('notes.deleteTitle')}>
+                      ✕
+                    </button>
+                  )}
+                </span>
               </div>
             </div>
           )
@@ -107,30 +123,19 @@ export function WeeklyNotes({ weeks, notes, kinds, canDelete, onAdd, onDelete, i
       />
 
       {composerWeek && (
-        <Modal title={t('notes.addForWeekTitle', { week: composerWeek })} onClose={() => setComposerWeek(null)} width={420}>
-          <div className="note-kind-picker">
-            {kinds.map((k) => (
-              <button
-                type="button"
-                key={k}
-                className={`note-kind-choice nc-${k} ${kind === k ? 'is-active' : ''}`}
-                onClick={() => setKind(k)}
-              >
-                <span className="note-tab-dot" style={{ background: 'var(--nc)' }} />
-                {t(`notes.kind.${k}`)}
-              </button>
-            ))}
-          </div>
-          <textarea rows={4} autoFocus placeholder={t('notes.placeholder')} value={content} onChange={(e) => setContent(e.target.value)} />
-          <div className="modal-actions">
-            <button className="btn btn-secondary" onClick={() => setComposerWeek(null)}>
-              {t('common.cancel')}
-            </button>
-            <button className="btn btn-primary" disabled={isSaving || !content.trim()} onClick={submit}>
-              {isSaving ? t('common.saving') : t('notes.add')}
-            </button>
-          </div>
-        </Modal>
+        <NoteEditorModal
+          title={t('notes.addForWeekTitle', { week: composerWeek })}
+          kinds={kinds}
+          initialKind={kinds[0]}
+          initialContent=""
+          submitLabel={t('notes.add')}
+          isSaving={isSaving}
+          onSubmit={(kind, content) => {
+            onAdd(composerWeek, kind, content)
+            setComposerWeek(null)
+          }}
+          onClose={() => setComposerWeek(null)}
+        />
       )}
     </>
   )

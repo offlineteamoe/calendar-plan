@@ -59,20 +59,37 @@ service cloud.firestore {
       allow read: if isOeUser();
       allow create, update, delete: if isAdmin();
 
-      // Notas: la única escritura permitida a un usuario de consulta, y solo
-      // en su propia categoría "observacion".
+      // Notas. Quién puede tocar qué:
+      //   · crear  → un administrador, cualquier categoría; un usuario de
+      //              consulta, solo "observacion" firmada con su correo.
+      //   · editar → una nota de consulta la edita SOLO quien la escribió;
+      //              una nota de administrador, cualquier administrador.
+      //   · borrar → su autor, o un administrador.
+      // Editar nunca puede reescribir la autoría ni la fecha de creación: eso
+      // es lo que hace que el historial de la nota sea confiable.
       match /nota/{docId} {
         function ownObservacion(data) {
           return isOeUser()
             && data.kind == 'observacion'
             && data.created_by == email();
         }
+        function isViewerNote(data) {
+          return data.get('created_by_role', 'admin') == 'viewer' || data.kind == 'observacion';
+        }
+        function identityKept() {
+          return request.resource.data.note_id == resource.data.note_id
+            && request.resource.data.created_by == resource.data.created_by
+            && request.resource.data.created_at == resource.data.created_at
+            && request.resource.data.get('created_by_role', 'admin') == resource.data.get('created_by_role', 'admin');
+        }
         allow read: if isOeUser();
         allow create: if isAdmin() || ownObservacion(request.resource.data);
-        // El update propio existe para que la traducción automática pueda
-        // guardarse después de crear la nota.
-        allow update: if isAdmin() || (ownObservacion(resource.data) && ownObservacion(request.resource.data));
-        allow delete: if isAdmin() || ownObservacion(resource.data);
+        allow update: if identityKept() && (
+          isViewerNote(resource.data)
+            ? (isOeUser() && resource.data.created_by == email())
+            : isAdmin()
+        );
+        allow delete: if isAdmin() || (isOeUser() && resource.data.created_by == email());
       }
 
       // El registro de cambios lo escribe cualquiera del dominio, porque
