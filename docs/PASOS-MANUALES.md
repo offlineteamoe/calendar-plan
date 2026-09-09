@@ -1,6 +1,6 @@
 # Lo que falta hacer a mano
 
-Son cuatro cosas. Ninguna es código: son permisos y llaves que solo se pueden
+Son cinco cosas (la última solo si aparece un aviso). Ninguna es código: son permisos y llaves que solo se pueden
 tocar desde una consola con tu cuenta. Están en orden de importancia — si solo
 haces las dos primeras, la herramienta ya funciona bien y de forma segura.
 
@@ -154,23 +154,6 @@ solución es del lado de Google Cloud, no del código.
 
 ---
 
-## Cómo saber que todo quedó bien
-
-| Qué probar | Qué debería pasar |
-|---|---|
-| Entrar con tu cuenta | Ves "+ Nuevo mes" y puedes editar las casillas |
-| Entrar con una cuenta cualquiera del dominio | Etiqueta `SOLO CONSULTA`, sin botón de nuevo mes, casillas de solo lectura |
-| Esa misma cuenta, pestaña Notas | Solo puede elegir "Observaciones a considerar" (fucsia) |
-| Tu cuenta, pestaña Notas | Ves esa observación junto a las demás notas |
-| Escribir una nota en español y cambiar el idioma a inglés | Con el paso 3 hecho, la nota aparece traducida a los pocos segundos |
-| Dos personas en el mismo mes | Cada una ve el avatar de la otra en la cabecera |
-| Cambiar un calendario de aprobado a maybe | La otra persona lo ve cambiar **sin recargar** |
-| La campanita del encabezado | Cuenta lo que hicieron los demás y lo explica en palabras |
-| Perfil → Registro de actividad | Solo aparece si tu cuenta es administradora |
-
-
----
-
 ## Paso 5 — Si el registro de actividad pide un índice
 
 La pantalla de **Registro de actividad** (solo administradores) lee los
@@ -184,3 +167,19 @@ uno o dos minutos. No hay nada que escribir.
 El resto de la aplicación —campanita, historial de notas, calendario— está
 escrito a propósito para no necesitar ningún índice, así que si algo más falla
 no es por esto.
+
+---
+
+## Cómo saber que todo quedó bien
+
+| Qué probar | Qué debería pasar |
+|---|---|
+| Entrar con tu cuenta | Ves "+ Nuevo mes" y puedes editar las casillas |
+| Entrar con una cuenta cualquiera del dominio | Etiqueta `SOLO CONSULTA`, sin botón de nuevo mes, casillas de solo lectura |
+| Esa misma cuenta, pestaña Notas | Solo puede elegir "Observaciones a considerar" (fucsia) |
+| Tu cuenta, pestaña Notas | Ves esa observación junto a las demás notas |
+| Escribir una nota en español y cambiar el idioma a inglés | Con el paso 3 hecho, la nota aparece traducida a los pocos segundos |
+| Dos personas en el mismo mes | Cada una ve el avatar de la otra en la cabecera |
+| Cambiar un calendario de aprobado a maybe | La otra persona lo ve cambiar **sin recargar** |
+| La campanita del encabezado | Cuenta lo que hicieron los demás y lo explica en palabras |
+| Perfil → Registro de actividad | Solo aparece si tu cuenta es administradora |
