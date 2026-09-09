@@ -183,3 +183,5 @@ no es por esto.
 | Cambiar un calendario de aprobado a maybe | La otra persona lo ve cambiar **sin recargar** |
 | La campanita del encabezado | Cuenta lo que hicieron los demás y lo explica en palabras |
 | Perfil → Registro de actividad | Solo aparece si tu cuenta es administradora |
+| La campanita, con una cuenta de consulta | No aparece: la actividad del equipo es de administradores |
+| Historial de una nota ajena, con una cuenta de consulta | No hay botón; solo lo ve en sus propias notas |

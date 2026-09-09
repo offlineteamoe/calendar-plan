@@ -102,9 +102,18 @@ export async function listAllChanges(max = 250): Promise<ChangeRecord[]> {
  * índice compuesto a mano en la consola de Firebase, y un historial de una
  * nota son unas pocas entradas.
  */
-export async function listChangesForDoc(monthKey: string, docId: string): Promise<ChangeRecord[]> {
+export async function listChangesForDoc(
+  monthKey: string,
+  docId: string,
+  /** Si se pasa, solo los cambios de esa persona (lo que ve un usuario de consulta). */
+  onlyEmail?: string,
+): Promise<ChangeRecord[]> {
   const ref = collection(getDb(), COLLECTIONS.months, monthKey, COLLECTIONS.changes)
-  const snap = await getDocs(query(ref, where('doc_id', '==', docId)))
+  // Solo filtros de igualdad: no hacen falta índices compuestos.
+  const q = onlyEmail
+    ? query(ref, where('doc_id', '==', docId), where('user_email', '==', onlyEmail))
+    : query(ref, where('doc_id', '==', docId))
+  const snap = await getDocs(q)
   return snap.docs.map((d) => d.data() as ChangeRecord).sort((a, b) => (a.at < b.at ? 1 : -1))
 }
 

@@ -6,6 +6,7 @@ import { useI18n } from '../i18n/I18nContext'
 import { usePresence } from '../hooks/usePresence'
 import { useChanges } from '../hooks/useChanges'
 import { useUndoRedo } from '../hooks/useUndoRedo'
+import { useRole } from '../hooks/useRole'
 import { useVersions } from '../hooks/useVersions'
 import { AppHeader } from '../components/AppHeader'
 import { CalendarGrid } from '../features/calendar/CalendarGrid'
@@ -35,6 +36,7 @@ export function CalendarPage() {
   const navigate = useNavigate()
   const { user } = useAuth()
   const { t, locale } = useI18n()
+  const { canEdit } = useRole()
   const queryClient = useQueryClient()
 
   const [brand, setBrand] = useState<Brand>(BRANDS[0])
@@ -80,7 +82,10 @@ export function CalendarPage() {
     whereLabel,
   ).filter((p) => p.uid !== user?.uid)
 
-  const changes = useChanges(monthKey)
+  // Un usuario de consulta solo recibe su propio rastro (ver useChanges), así
+  // que no le llega la señal de "otra persona guardó algo". Para que no vea
+  // datos viejos, sus consultas se refrescan solas cada minuto.
+  const changes = useChanges(monthKey, { email: user?.email ?? '', isAdmin: canEdit })
   const lastForeignChange = changes.find((c) => c.user_email !== user?.email)?.change_id ?? null
   const myChanges = useMemo(() => changes.filter((c) => c.user_email === user?.email), [changes, user?.email])
 
@@ -110,6 +115,12 @@ export function CalendarPage() {
     if (!lastForeignChange) return
     refreshData()
   }, [lastForeignChange, refreshData])
+
+  useEffect(() => {
+    if (canEdit) return
+    const timer = setInterval(refreshData, 60_000)
+    return () => clearInterval(timer)
+  }, [canEdit, refreshData])
 
   const statusMutation = useMutation({
     mutationFn: () => {

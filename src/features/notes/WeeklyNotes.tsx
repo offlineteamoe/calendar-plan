@@ -13,6 +13,7 @@ interface Props {
   kinds: NotaKind[]
   canEditNote: (note: NotaRow) => boolean
   canDelete: (note: NotaRow) => boolean
+  canSeeHistory: (note: NotaRow) => boolean
   onAdd: (weekStart: string, kind: NotaKind, content: string) => void
   onEdit: (note: NotaRow) => void
   onHistory: (note: NotaRow) => void
@@ -36,6 +37,7 @@ export function WeeklyNotes({
   kinds,
   canEditNote,
   canDelete,
+  canSeeHistory,
   onAdd,
   onEdit,
   onHistory,
@@ -116,9 +118,11 @@ export function WeeklyNotes({
               </div>
 
               <div className="week-note-actions">
-                <button className="note-act" onClick={() => onHistory(note)}>
-                  {t('noteHistory.open')}
-                </button>
+                {canSeeHistory(note) && (
+                  <button className="note-act" onClick={() => onHistory(note)}>
+                    {t('noteHistory.open')}
+                  </button>
+                )}
                 {canEditNote(note) && (
                   <button className="note-act" onClick={() => onEdit(note)}>
                     {t('notes.edit')}

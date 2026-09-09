@@ -62,6 +62,14 @@ ahí salen el historial personal, deshacer/rehacer, la campanita y el registro
 de actividad. Si agregas una escritura nueva y no le pones `summaryKey`, la
 notificación saldrá con un texto genérico: eso cuenta como bug.
 
+**El historial es información del equipo que administra.** Un administrador ve
+todo; el resto solo su propio rastro: la campanita no existe para ellos, la
+página `/logs` tampoco, y el botón de historial de una nota solo aparece en las
+notas propias. Está en `firestore.rules`. Al programar: Firestore rechaza la
+consulta entera —no la filtra— si pudiera devolver documentos que no puedes
+leer, así que cualquier lectura de `changes` que no haga un administrador debe
+incluir `where('user_email', '==', <su correo>)`.
+
 **Nada destructivo sin confirmación** (`src/components/ConfirmModal.tsx`), y la
 confirmación muestra el contenido afectado.
 

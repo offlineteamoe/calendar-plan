@@ -67,7 +67,7 @@ interface AppHeaderProps {
 
 export function AppHeader({ start, presenceUsers, monthKey = null, myChanges, onRevert, undoRedo }: AppHeaderProps) {
   const { isViewer, canEdit } = useRole()
-  const activity = useActivityFeed(monthKey)
+  const activity = useActivityFeed(monthKey, canEdit)
   const { locale, setLocale, t } = useI18n()
   const { preference, setPreference } = useTheme()
   const { user, status, signOut } = useAuth()
@@ -97,7 +97,7 @@ export function AppHeader({ start, presenceUsers, monthKey = null, myChanges, on
       <div className="header-right" ref={rootRef}>
         {isViewer && <span className="role-badge" title={t('role.readOnly')}>{t('role.badge')}</span>}
         {presenceUsers && <PresenceCell users={presenceUsers} />}
-        <NotificationBell changes={activity} myEmail={user?.email ?? ''} />
+        {canEdit && <NotificationBell changes={activity} myEmail={user?.email ?? ''} />}
 
         {undoRedo && (
           <>

@@ -3,6 +3,8 @@ import { Modal } from '../../components/Modal'
 import { listChangesForDoc } from '../../lib/changelog'
 import { formatDateTime } from '../../lib/dateUtils'
 import { useI18n } from '../../i18n/I18nContext'
+import { useRole } from '../../hooks/useRole'
+import { useAuth } from '../../context/AuthContext'
 import type { ChangeRecord, NotaKind, NotaRow } from '../../types'
 
 interface Props {
@@ -24,9 +26,13 @@ function asNote(value: Record<string, unknown> | null): Snapshot {
  */
 export function NoteHistoryModal({ monthKey, docId, onClose }: Props) {
   const { t, locale } = useI18n()
+  const { canEdit } = useRole()
+  const { user } = useAuth()
+  // Un usuario de consulta solo ve su propio rastro, nunca el de otra persona.
+  const onlyEmail = canEdit ? undefined : (user?.email ?? '')
   const historyQuery = useQuery({
-    queryKey: ['note-history', monthKey, docId],
-    queryFn: () => listChangesForDoc(monthKey, docId),
+    queryKey: ['note-history', monthKey, docId, onlyEmail ?? 'all'],
+    queryFn: () => listChangesForDoc(monthKey, docId, onlyEmail),
   })
 
   const entries = historyQuery.data ?? []

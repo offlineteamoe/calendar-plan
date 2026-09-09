@@ -145,6 +145,13 @@ El historial. Una entrada por escritura, con el estado completo **antes** y
 | `before`, `after` | objeto \| null | estado completo |
 | `user_email`, `user_initials`, `at` | | |
 
+Quién puede leerlo: un administrador ve el historial de todo el equipo; el
+resto del dominio, solo las entradas que llevan su propio correo. Está en las
+reglas, no solo en la interfaz. Consecuencia práctica al programar: Firestore
+**rechaza** una consulta que pudiera devolver documentos que no puedes leer, no
+la filtra — así que toda consulta al historial hecha por alguien que no
+administra tiene que incluir `where('user_email', '==', <su correo>)`.
+
 Guardar `before` y `after` completos es lo que permite, con el mismo dato:
 el historial personal, deshacer/rehacer, volver a un punto anterior, y el
 registro de actividad de todo el equipo. Esta colección **nunca se edita ni se

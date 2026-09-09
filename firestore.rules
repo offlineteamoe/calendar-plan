@@ -95,8 +95,15 @@ service cloud.firestore {
       // El registro de cambios lo escribe cualquiera del dominio, porque
       // también deja rastro de las observaciones. Nadie puede editarlo ni
       // borrarlo: es un historial, no un dato editable.
+      //
+      // Leerlo es otra cosa: quién hizo qué en el plan lo ve el equipo que
+      // administra. Un usuario de consulta solo alcanza su propio rastro.
+      // Ojo: Firestore no filtra una consulta, la rechaza entera — por eso el
+      // cliente pide explícitamente `user_email == su correo` (ver
+      // src/hooks/useChanges.ts y listChangesForDoc).
       match /changes/{changeId} {
-        allow read, create: if isOeUser();
+        allow read: if isAdmin() || (isOeUser() && resource.data.user_email == email());
+        allow create: if isOeUser();
         allow update, delete: if false;
       }
 
@@ -111,7 +118,7 @@ service cloud.firestore {
     // Consultas de grupo de colección: el registro de actividad global
     // (página /logs) y el resumen de aprobación de la lista de meses.
     match /{path=**}/changes/{changeId} {
-      allow read: if isOeUser();
+      allow read: if isAdmin() || (isOeUser() && resource.data.user_email == email());
     }
     match /{path=**}/versions/{versionId} {
       allow read: if isOeUser();

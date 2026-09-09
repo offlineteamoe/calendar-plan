@@ -37,10 +37,16 @@ function useChangesOf(monthKey: string | null): ChangeRecord[] {
   return changes
 }
 
-/** Actividad del mes abierto (si hay) más los eventos de meses creados o eliminados. */
-export function useActivityFeed(monthKey: string | null): ChangeRecord[] {
-  const monthChanges = useChangesOf(monthKey)
-  const globalChanges = useChangesOf(GLOBAL_LOG_KEY)
+/**
+ * Actividad del mes abierto más los eventos de meses creados o eliminados.
+ *
+ * Solo para administradores: quién hizo qué en el plan es información del
+ * equipo que administra, y las reglas de Firestore tampoco dejarían leer los
+ * cambios ajenos a nadie más.
+ */
+export function useActivityFeed(monthKey: string | null, isAdmin: boolean): ChangeRecord[] {
+  const monthChanges = useChangesOf(isAdmin ? monthKey : null)
+  const globalChanges = useChangesOf(isAdmin ? GLOBAL_LOG_KEY : null)
 
   return useMemo(
     () => [...monthChanges, ...globalChanges].sort((a, b) => (a.at < b.at ? 1 : -1)).slice(0, FEED_LIMIT),

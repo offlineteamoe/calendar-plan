@@ -74,6 +74,8 @@ export function NotesPanel({ monthKey, scope, version, weeks }: Props) {
   // los administradores las edita cualquier administrador.
   const canEditNote = (note: NotaRow) => (isViewerNote(note) ? note.created_by === user?.email : canEdit)
   const canDelete = (note: NotaRow) => canEdit || note.created_by === user?.email
+  // El historial de una nota ajena es del equipo que administra.
+  const canSeeHistory = (note: NotaRow) => canEdit || note.created_by === user?.email
   const kindsFor = (note: NotaRow) => (isViewerNote(note) ? [NOTA_KIND_VIEWER] : NOTA_KINDS_ADMIN)
 
   const notesQuery = useQuery({
@@ -236,6 +238,7 @@ export function NotesPanel({ monthKey, scope, version, weeks }: Props) {
           kinds={creatableKinds}
           canEditNote={canEditNote}
           canDelete={canDelete}
+          canSeeHistory={canSeeHistory}
           onAdd={(weekStart, k, text) => addMutation.mutate({ kind: k, content: text, weekStart })}
           onEdit={(note) => setEditing(note)}
           onHistory={(note) => setHistoryOf(note)}
@@ -251,9 +254,11 @@ export function NotesPanel({ monthKey, scope, version, weeks }: Props) {
               {general.map((n) => (
                 <li key={n.note_id} className={`note-item nc-${n.kind}`}>
                   <span className="note-actions">
-                    <button className="icon-btn" title={t('noteHistory.open')} onClick={() => setHistoryOf(n)}>
-                      ⟲
-                    </button>
+                    {canSeeHistory(n) && (
+                      <button className="icon-btn" title={t('noteHistory.open')} onClick={() => setHistoryOf(n)}>
+                        ⟲
+                      </button>
+                    )}
                     {canEditNote(n) && (
                       <button className="icon-btn" title={t('notes.editTitle')} onClick={() => setEditing(n)}>
                         ✎
