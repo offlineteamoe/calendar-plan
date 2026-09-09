@@ -31,7 +31,7 @@ export function Logo({ size = 26, withWordmark = true, glow = false }: { size?: 
   return (
     <span className="logo">
       <LogoMark size={size} glow={glow} />
-      {withWordmark && <span className="logo-word">Plan de Pauta</span>}
+      {withWordmark && <span className="logo-word">Offline Planning</span>}
     </span>
   )
 }

@@ -71,9 +71,16 @@ export function onAuthStateChanged(cb: (user: User | null) => void) {
   return onFirebaseAuthStateChanged(getFirebaseAuth(), cb)
 }
 
+/**
+ * Acepta el dominio corporativo y sus subdominios: hay cuentas del equipo en
+ * `@openenglish.com` y otras en `@business.openenglish.com`. La comprobación
+ * exige el punto separador para que `notopenenglish.com` no cuele.
+ */
 export function isAllowedDomainEmail(email: string | null | undefined): boolean {
   if (!email) return false
-  return email.toLowerCase().endsWith('@' + config.allowedDomain.toLowerCase())
+  const domain = email.toLowerCase().split('@')[1] ?? ''
+  const allowed = config.allowedDomain.toLowerCase()
+  return domain === allowed || domain.endsWith('.' + allowed)
 }
 
 export function getAllowedDomain(): string {

@@ -1,10 +1,12 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { getPlanRows } from '../../lib/store'
+import { getPlanRows, type Scope } from '../../lib/store'
 import { NotesPanel } from '../notes/NotesPanel'
 import { ScenarioEditor } from './ScenarioEditor'
-import { CHANNELS, COUNTRY_LABELS, type Brand, type Country } from '../../types'
+import { WeekCardsPanel } from './WeekCardsPanel'
+import { CHANNELS, COLLECTIONS, COUNTRY_LABELS, LATAM_PARTS, type VersionEntry } from '../../types'
 import { useI18n } from '../../i18n/I18nContext'
+import type { CalendarWeek } from '../../lib/dateUtils'
 
 type TabKey = 'summary' | 'notes' | 'spend' | 'results' | 'creative'
 
@@ -18,17 +20,25 @@ const TABS: { key: TabKey; labelKey: string }[] = [
 
 interface Props {
   monthKey: string
-  brand: Brand
-  country: Country
-  channel: string
+  scope: Scope
+  version: VersionEntry
+  weeks: CalendarWeek[]
+  latamView: boolean
 }
 
-export function SidePanel({ monthKey, brand, country, channel }: Props) {
+export function SidePanel({ monthKey, scope, version, weeks, latamView }: Props) {
   const { t, locale } = useI18n()
   const [tab, setTab] = useState<TabKey>('summary')
-  const planQuery = useQuery({ queryKey: ['plan', monthKey], queryFn: () => getPlanRows(monthKey) })
 
-  const rows = (planQuery.data ?? []).filter((r) => r.brand === brand && r.country === country)
+  const planQuery = useQuery({
+    queryKey: ['plan', monthKey, scope.versionId],
+    queryFn: () => getPlanRows(monthKey, scope.versionId),
+  })
+
+  const rows = (planQuery.data ?? []).filter((r) => {
+    if (r.brand !== scope.brand) return false
+    return latamView ? LATAM_PARTS.includes(r.country) : r.country === scope.country
+  })
   const total = rows.reduce((sum, r) => sum + r.planned_spend, 0)
   const byChannel = CHANNELS.map((ch) => ({
     channel: ch,
@@ -38,7 +48,7 @@ export function SidePanel({ monthKey, brand, country, channel }: Props) {
 
   return (
     <aside className="panel">
-      <nav className="tab-bar">
+      <nav className="tab-bar aligned-head">
         {TABS.map((tb) => (
           <button key={tb.key} className={tb.key === tab ? 'is-active' : ''} onClick={() => setTab(tb.key)}>
             {t(tb.labelKey)}
@@ -46,54 +56,68 @@ export function SidePanel({ monthKey, brand, country, channel }: Props) {
         ))}
       </nav>
 
-      {tab === 'notes' ? (
-        <NotesPanel monthKey={monthKey} brand={brand} country={country} channel={channel} />
-      ) : (
-        <div className="panel-body">
-          {tab === 'summary' && (
-            <div className="stack">
-              <div className="stat-block">
-                <span className="stat-value">${total.toLocaleString(locale)}</span>
-                <span className="stat-label">{t('summary.plannedTotal')}</span>
-                <span className="stat-label faint">
-                  {t('summary.selection', { brand, country: COUNTRY_LABELS[country] })}
-                </span>
-              </div>
-              <ScenarioEditor monthKey={monthKey} brand={brand} />
-            </div>
-          )}
+      {tab === 'notes' && <NotesPanel monthKey={monthKey} scope={scope} version={version} weeks={weeks} />}
 
-          {tab === 'spend' && (
-            <div className="stack">
-              <h3>{t('summary.byChannel')}</h3>
-              {byChannel.map((c) => (
-                <div className="bar-row" key={c.channel}>
-                  <div className="bar-row-top">
-                    <span>{c.channel}</span>
-                    <span className="tabular">${c.total.toLocaleString(locale)}</span>
-                  </div>
-                  <div className="bar-track">
-                    <div className="bar-fill" style={{ width: `${Math.round((c.total / maxChannel) * 100)}%` }} />
-                  </div>
+      {tab === 'results' && (
+        <WeekCardsPanel
+          monthKey={monthKey}
+          scope={scope}
+          version={version}
+          weeks={weeks}
+          kind={COLLECTIONS.results}
+          title={t('tabs.results')}
+          placeholder={t('weekCards.resultsPh')}
+        />
+      )}
+
+      {tab === 'creative' && (
+        <WeekCardsPanel
+          monthKey={monthKey}
+          scope={scope}
+          version={version}
+          weeks={weeks}
+          kind={COLLECTIONS.creative}
+          title={t('tabs.creative')}
+          placeholder={t('weekCards.creativePh')}
+        />
+      )}
+
+      {(tab === 'summary' || tab === 'spend') && (
+        <>
+          <div className="aligned-subhead">
+            <span className="week-col-title">
+              {latamView ? t('latam.viewing') : COUNTRY_LABELS[scope.country]} · {scope.brand}
+            </span>
+          </div>
+          <div className="panel-body">
+            {tab === 'summary' && (
+              <div className="stack">
+                <div className="stat-block">
+                  <span className="stat-value">${total.toLocaleString(locale)}</span>
+                  <span className="stat-label">{t('summary.plannedTotal')}</span>
                 </div>
-              ))}
-            </div>
-          )}
+                {!latamView && <ScenarioEditor monthKey={monthKey} scope={scope} version={version} />}
+              </div>
+            )}
 
-          {tab === 'results' && (
-            <div className="stack">
-              <h3>{t('tabs.results')}</h3>
-              <p className="muted small">{t('phase2.empty')}</p>
-            </div>
-          )}
-
-          {tab === 'creative' && (
-            <div className="stack">
-              <h3>{t('tabs.creative')}</h3>
-              <p className="muted small">{t('phase2.empty')}</p>
-            </div>
-          )}
-        </div>
+            {tab === 'spend' && (
+              <div className="stack">
+                <h3>{t('summary.byChannel')}</h3>
+                {byChannel.map((c) => (
+                  <div className="bar-row" key={c.channel}>
+                    <div className="bar-row-top">
+                      <span>{c.channel}</span>
+                      <span className="tabular">${c.total.toLocaleString(locale)}</span>
+                    </div>
+                    <div className="bar-track">
+                      <div className="bar-fill" style={{ width: `${Math.round((c.total / maxChannel) * 100)}%` }} />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </>
       )}
     </aside>
   )

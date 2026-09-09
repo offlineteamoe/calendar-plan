@@ -657,11 +657,13 @@
   background: color-mix(in srgb, var(--nc) 12%, var(--surface));
 }
 
-/* Colores por tipo de nota */
-.nc-pendiente { --nc: #E08A0B; }
-.nc-cambio { --nc: #2B6BFF; }
-.nc-info { --nc: #0F9B76; }
+/* Colores por tipo de nota (pedidos por el equipo) */
+.nc-pendiente { --nc: #DC3B34; }
+.nc-cambio { --nc: #E0A400; }
+.nc-info { --nc: #2B6BFF; }
 .nc-otro { --nc: #8B5CF6; }
+/* Categoría exclusiva de los usuarios de consulta. */
+.nc-observacion { --nc: #E0399B; }
 
 /* ============ Resumen / spend ============ */
 
@@ -816,4 +818,554 @@
   .log-table td:nth-child(4) {
     display: none;
   }
+}
+
+
+/* ============ Alineación semana a semana (calendario ↔ paneles) ============
+   Ambas columnas usan la MISMA estructura vertical, así que las semanas
+   quedan a la misma altura sin ajustes a ojo:
+     encabezado (--h-head) + subencabezado (--h-sub) + fila de días
+     (--h-weekhead) + N filas de semana con flex:1 y el mismo gap. */
+
+:root {
+  --h-head: 46px;
+  --h-sub: 40px;
+  --h-weekhead: 22px;
+  --week-gap: 5px;
+}
+
+.aligned-head {
+  height: var(--h-head);
+  min-height: var(--h-head);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 12px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.aligned-subhead {
+  height: var(--h-sub);
+  min-height: var(--h-sub);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 12px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.aligned-weekhead {
+  height: var(--h-weekhead);
+  min-height: var(--h-weekhead);
+  display: flex;
+  align-items: center;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  flex-shrink: 0;
+}
+.aligned-weeks {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--week-gap);
+}
+.aligned-week {
+  flex: 1;
+  min-height: 0;
+}
+
+.week-grid {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 10px 12px 12px;
+  gap: var(--week-gap);
+}
+.week-grid .aligned-week {
+  display: grid;
+  grid-template-columns: 26px minmax(0, 1fr);
+  gap: 6px;
+}
+.aligned-week-tag {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 9.5px;
+  font-weight: 800;
+  color: var(--ink-faint);
+}
+.aligned-week-body {
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+}
+.week-col-title {
+  font-family: var(--font-display);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
+/* Notas por semana */
+.week-empty {
+  flex: 1;
+  border: 1.5px dashed var(--border-strong);
+  border-radius: 10px;
+  background: var(--surface-2);
+  color: var(--ink-faint);
+  font-family: var(--font-display);
+  font-size: 11.5px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.week-empty:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.week-note {
+  flex: 1;
+  min-width: 0;
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--nc, var(--accent));
+  border-radius: 10px;
+  padding: 6px 9px;
+  background: var(--surface);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  overflow: hidden;
+}
+.week-note-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+.week-note-kind {
+  font-family: var(--font-display);
+  font-size: 9.5px;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--nc, var(--accent));
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.week-note-nav {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex-shrink: 0;
+}
+.week-note-count {
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-faint);
+  padding: 0 2px;
+}
+.mini-btn {
+  width: 18px;
+  height: 18px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: var(--surface-2);
+  color: var(--ink-soft);
+  border-radius: 5px;
+  font-size: 11px;
+  line-height: 1;
+  cursor: pointer;
+}
+.mini-btn:hover:not(:disabled) {
+  background: var(--surface-3);
+  color: var(--ink);
+}
+.mini-btn:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+.week-note-text {
+  flex: 1;
+  min-height: 0;
+  font-size: 12px;
+  line-height: 1.35;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+}
+.week-note-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  font-size: 9.5px;
+  color: var(--ink-faint);
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+/* Tarjetas semanales de resultados / creativos */
+.week-card-input {
+  flex: 1;
+  width: 100%;
+  resize: none;
+  border-radius: 10px;
+  font-size: 12px;
+  padding: 6px 9px;
+  background: var(--surface);
+}
+
+/* Barra de alcance del calendario */
+.scope-bar {
+  justify-content: space-between;
+}
+.scope-bar-left,
+.scope-bar-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.scope-bar-where {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12.5px;
+  color: var(--ink-soft);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.scope-bar-where strong {
+  color: var(--ink);
+}
+.scope-sep {
+  color: var(--ink-faint);
+}
+.version-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  border-radius: 100px;
+  padding: 4px 10px 4px 4px;
+  font-family: var(--font-display);
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--ink);
+  cursor: pointer;
+}
+.version-chip:hover {
+  border-color: var(--accent);
+}
+.version-letter {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--grad-accent);
+  color: #fff;
+  font-size: 10.5px;
+  font-weight: 800;
+}
+.version-caret {
+  color: var(--ink-faint);
+  font-size: 10px;
+}
+.status-toggle {
+  border: none;
+  cursor: pointer;
+}
+.latam-toggle {
+  border: 1px solid var(--border);
+  font-size: 11.5px;
+  padding: 6px 12px;
+}
+.latam-toggle.is-on {
+  background: var(--accent-soft);
+  color: var(--accent);
+  border-color: var(--accent);
+}
+.cal-subhead {
+  justify-content: space-between;
+}
+.cal-channel {
+  font-family: var(--font-display);
+  font-size: 12px;
+  font-weight: 700;
+}
+.cal-total-wrap {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-left: auto;
+}
+.cal-readonly {
+  color: var(--ink-soft);
+}
+
+/* Sub-encabezado de notas: general/semanal + filtros por tipo */
+.note-subhead {
+  justify-content: space-between;
+  gap: 8px;
+}
+.seg {
+  display: inline-flex;
+  padding: 3px;
+  gap: 2px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 100px;
+}
+.seg button {
+  border: none;
+  background: none;
+  border-radius: 100px;
+  padding: 4px 11px;
+  font-family: var(--font-display);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--ink-soft);
+  cursor: pointer;
+}
+.seg button.is-active {
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: var(--shadow-sm);
+}
+.kind-filters {
+  display: flex;
+  gap: 4px;
+}
+.kind-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  border-radius: 100px;
+  padding: 3px 8px;
+  font-size: 10.5px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-soft);
+  cursor: pointer;
+}
+.kind-chip.is-active {
+  border-color: var(--nc, var(--accent));
+  color: var(--nc, var(--ink));
+  background: color-mix(in srgb, var(--nc, var(--accent)) 12%, var(--surface));
+}
+
+
+/* ============ Meses: filas a lo ancho ============ */
+
+.hero-compact {
+  padding: 34px 0 30px;
+}
+.months-toolbar {
+  gap: 12px;
+}
+.months-new {
+  margin-left: auto;
+}
+.phase-filters {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.phase-current { --nc: #0F9B76; }
+.phase-planning { --nc: #2B6BFF; }
+.phase-closed { --nc: #8A93A6; }
+
+.month-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-bottom: 60px;
+}
+.month-row {
+  position: relative;
+  display: flex;
+  align-items: stretch;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow-sm);
+  transition: transform 0.16s ease, box-shadow 0.16s ease, border-color 0.16s ease;
+}
+.month-row:hover {
+  transform: translateY(-2px);
+  border-color: var(--accent);
+  box-shadow: var(--shadow-md);
+}
+.month-row-btn {
+  flex: 1;
+  min-width: 0;
+  display: grid;
+  grid-template-columns: minmax(160px, 1.1fr) auto minmax(0, 2fr) 28px;
+  align-items: center;
+  gap: 18px;
+  background: none;
+  border: none;
+  padding: 18px 14px 18px 22px;
+  cursor: pointer;
+  text-align: left;
+  color: var(--ink);
+  border-radius: var(--r-lg);
+}
+.month-row-id {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.month-row-name {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 20px;
+  letter-spacing: -0.02em;
+  text-transform: capitalize;
+}
+.month-row-year {
+  font-size: 11.5px;
+  color: var(--ink-faint);
+  font-variant-numeric: tabular-nums;
+}
+.phase-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-self: start;
+  padding: 5px 12px;
+  border-radius: 100px;
+  font-family: var(--font-display);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: var(--nc);
+  background: color-mix(in srgb, var(--nc) 14%, transparent);
+  border: 1px solid color-mix(in srgb, var(--nc) 32%, transparent);
+}
+.month-row-approval {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  font-size: 12.5px;
+  color: var(--ink-soft);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.dot-ok { background: #0F9B76; }
+.dot-warn { background: #E0A400; }
+.month-row-go {
+  color: var(--ink-faint);
+  font-size: 16px;
+  justify-self: end;
+}
+.month-row:hover .month-row-go {
+  color: var(--accent);
+}
+.month-row-menu {
+  display: flex;
+  align-items: center;
+  padding-right: 14px;
+  padding-left: 4px;
+  position: relative;
+}
+.dot-idle { background: var(--border-strong); }
+.menu-panel-right {
+  right: 0;
+  left: auto;
+}
+.months-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  padding: 54px 20px 70px;
+  text-align: center;
+}
+
+@media (max-width: 720px) {
+  .month-row-btn {
+    grid-template-columns: 1fr;
+    gap: 8px;
+    padding: 16px 18px;
+  }
+  .month-row-go { display: none; }
+}
+
+/* ============ Rol de consulta ============ */
+
+.role-hint {
+  font-size: 11.5px;
+  color: var(--ink-faint);
+  margin-bottom: 6px;
+}
+.week-card-read {
+  flex: 1;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 6px 9px;
+  font-size: 12px;
+  line-height: 1.35;
+  color: var(--ink-soft);
+  background: var(--surface-2);
+  overflow: hidden;
+}
+.role-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 9px;
+  border-radius: 100px;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--header-ink-soft, rgba(255, 255, 255, 0.72));
+  border: 1px solid rgba(255, 255, 255, 0.16);
+}
+
+/* Spinner del botón de acceso: la tarjeta no desaparece mientras Google abre
+   su ventana, solo cambia de estado. */
+.spinner {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.35);
+  border-top-color: #fff;
+  animation: spin 0.7s linear infinite;
+  margin-right: 8px;
+  display: inline-block;
+}
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+.menu-item-label {
+  flex: 1;
+  text-align: left;
 }

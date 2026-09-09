@@ -14,7 +14,13 @@ export interface CurrentUser {
   initials: string
 }
 
-type AuthStatus = 'loading' | 'signed-out' | 'signed-in' | 'error'
+/**
+ * `booting` es solo el arranque (restaurar la sesión previa) — es el único
+ * estado que justifica una pantalla en blanco. Al pulsar "Continuar con
+ * Google" pasamos a `signing-in`, que MANTIENE el formulario en pantalla con
+ * su spinner: perder la tarjeta y dejar solo el fondo se ve roto.
+ */
+type AuthStatus = 'booting' | 'signed-out' | 'signing-in' | 'signed-in' | 'error'
 
 interface AuthContextValue {
   status: AuthStatus
@@ -41,7 +47,7 @@ function toCurrentUser(firebaseUser: User): CurrentUser | null {
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [status, setStatus] = useState<AuthStatus>('loading')
+  const [status, setStatus] = useState<AuthStatus>('booting')
   const [user, setUser] = useState<CurrentUser | null>(null)
   const [error, setError] = useState<string | null>(null)
 
@@ -79,7 +85,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return
     }
     setError(null)
-    setStatus('loading')
+    setStatus('signing-in')
     try {
       await signInWithGoogle()
     } catch (err) {

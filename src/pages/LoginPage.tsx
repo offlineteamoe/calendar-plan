@@ -12,6 +12,8 @@ export function LoginPage() {
   const { t, locale, setLocale } = useI18n()
   const { preference, setPreference } = useTheme()
   const missing = missingConfigKeys()
+  // El popup de Google se abre encima: la tarjeta sigue viva, solo esperando.
+  const busy = status === 'signing-in'
 
   return (
     <div className="login-shell">
@@ -52,8 +54,15 @@ export function LoginPage() {
             </div>
           ) : (
             <>
-              <button className="btn btn-primary" onClick={() => void signIn()} disabled={status === 'loading'}>
-                {status === 'loading' ? t('login.connecting') : t('login.continueWithGoogle')}
+              <button className="btn btn-primary" onClick={() => void signIn()} disabled={busy}>
+                {busy ? (
+                  <>
+                    <span className="spinner" aria-hidden />
+                    {t('login.connecting')}
+                  </>
+                ) : (
+                  t('login.continueWithGoogle')
+                )}
               </button>
               <p className="login-domain">{t('app.domainOnly', { domain: getAllowedDomain() })}</p>
             </>

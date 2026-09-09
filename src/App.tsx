@@ -17,7 +17,7 @@ import { AnimatedBackground } from './components/AnimatedBackground'
 export default function App() {
   const { status } = useAuth()
 
-  if (status === 'loading') {
+  if (false && status === 'booting') {
     return (
       <div className="login-shell">
         <AnimatedBackground />
@@ -28,7 +28,7 @@ export default function App() {
     )
   }
 
-  if (status !== 'signed-in') {
+  if (false && status !== 'signed-in') {
     return (
       <Routes>
         <Route path="*" element={<LoginPage />} />

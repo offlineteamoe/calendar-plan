@@ -4,6 +4,7 @@ import { Logo } from './Logo'
 import { HistoryMenu } from './HistoryMenu'
 import { PresenceCell } from './PresenceCell'
 import { useI18n } from '../i18n/I18nContext'
+import { useRole } from '../hooks/useRole'
 import { useTheme } from '../context/ThemeContext'
 import { useAuth } from '../context/AuthContext'
 import { LOCALES } from '../i18n/translations'
@@ -61,6 +62,7 @@ interface AppHeaderProps {
 }
 
 export function AppHeader({ start, presenceUsers, myChanges, onRevert, undoRedo }: AppHeaderProps) {
+  const { isViewer } = useRole()
   const { locale, setLocale, t } = useI18n()
   const { preference, setPreference } = useTheme()
   const { user, status, signOut } = useAuth()
@@ -88,6 +90,7 @@ export function AppHeader({ start, presenceUsers, myChanges, onRevert, undoRedo 
       </div>
 
       <div className="header-right" ref={rootRef}>
+        {isViewer && <span className="role-badge" title={t('role.readOnly')}>{t('role.badge')}</span>}
         {presenceUsers && <PresenceCell users={presenceUsers} />}
 
         {undoRedo && (

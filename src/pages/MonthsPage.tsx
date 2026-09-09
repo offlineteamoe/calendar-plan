@@ -1,14 +1,26 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { createMonth, deleteMonth, listMonths, setMonthStatus } from '../lib/store'
+import { createMonth, deleteMonth, listMonths, listVersionsByMonth } from '../lib/store'
 import { useAuth } from '../context/AuthContext'
+import { useRole } from '../hooks/useRole'
 import { useI18n } from '../i18n/I18nContext'
 import { AppHeader } from '../components/AppHeader'
 import { AnimatedBackground } from '../components/AnimatedBackground'
 import { NewMonthModal } from '../features/months/NewMonthModal'
 import { DeleteMonthModal } from '../features/months/DeleteMonthModal'
-import type { MonthEntry } from '../types'
+import {
+  BRANDS,
+  calendarStatus,
+  COUNTRIES,
+  COUNTRY_LABELS,
+  monthPhase,
+  type MonthEntry,
+  type MonthPhase,
+  type VersionEntry,
+} from '../types'
+
+const PHASES: MonthPhase[] = ['current', 'planning', 'closed']
 
 function monthName(monthKey: string, locale: string): string {
   const [year, month] = monthKey.split('-').map(Number)
@@ -16,15 +28,36 @@ function monthName(monthKey: string, locale: string): string {
   return label.charAt(0).toUpperCase() + label.slice(1)
 }
 
-function MonthMenu({
-  month,
-  onArchiveToggle,
-  onDelete,
-}: {
-  month: MonthEntry
-  onArchiveToggle: () => void
-  onDelete: () => void
-}) {
+interface Approval {
+  total: number
+  pending: number
+  firstPending: string | null
+}
+
+/**
+ * Resumen de aprobación del mes: cuántos calendarios (versión × marca ×
+ * región) siguen en "maybe" y cuál es el primero, para saber de un vistazo
+ * que ahí todavía falta algo sin tener que entrar al mes.
+ */
+function approvalOf(versions: VersionEntry[]): Approval {
+  let total = 0
+  let pending = 0
+  let firstPending: string | null = null
+  for (const version of versions) {
+    for (const brand of BRANDS) {
+      for (const country of COUNTRIES) {
+        total += 1
+        if (calendarStatus(version, brand, country) !== 'approved') {
+          pending += 1
+          firstPending ??= `${version.letter} · ${brand} · ${COUNTRY_LABELS[country]}`
+        }
+      }
+    }
+  }
+  return { total, pending, firstPending }
+}
+
+function MonthMenu({ onDelete }: { onDelete: () => void }) {
   const { t } = useI18n()
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
@@ -38,7 +71,7 @@ function MonthMenu({
   }, [])
 
   return (
-    <div className="month-card-menu" ref={ref}>
+    <div className="month-row-menu" ref={ref}>
       <button
         className="icon-btn"
         aria-label="menu"
@@ -50,16 +83,7 @@ function MonthMenu({
         ⋯
       </button>
       {open && (
-        <div className="menu-panel" onClick={(e) => e.stopPropagation()}>
-          <button
-            className="menu-item"
-            onClick={() => {
-              setOpen(false)
-              onArchiveToggle()
-            }}
-          >
-            {month.status === 'active' ? t('months.menu.archive') : t('months.menu.unarchive')}
-          </button>
+        <div className="menu-panel menu-panel-right" onClick={(e) => e.stopPropagation()}>
           <button
             className="menu-item menu-item-danger"
             onClick={() => {
@@ -77,36 +101,35 @@ function MonthMenu({
 
 export function MonthsPage() {
   const { user } = useAuth()
+  const { canEdit } = useRole()
   const { t, locale } = useI18n()
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const currentYear = new Date().getFullYear()
   const [activeYear, setActiveYear] = useState(currentYear)
+  const [phaseFilter, setPhaseFilter] = useState<MonthPhase | 'all'>('all')
   const [showNew, setShowNew] = useState(false)
   const [deleteTarget, setDeleteTarget] = useState<MonthEntry | null>(null)
 
   const monthsQuery = useQuery({ queryKey: ['months'], queryFn: listMonths })
+  const versionsQuery = useQuery({ queryKey: ['versions-by-month'], queryFn: listVersionsByMonth })
   const months = useMemo(() => monthsQuery.data ?? [], [monthsQuery.data])
 
   const createMutation = useMutation({
     mutationFn: (monthKey: string) => createMonth(monthKey, user?.email ?? ''),
     onSuccess: (entry) => {
       void queryClient.invalidateQueries({ queryKey: ['months'] })
+      void queryClient.invalidateQueries({ queryKey: ['versions-by-month'] })
       setShowNew(false)
       navigate(`/calendar/${entry.month_key}`)
     },
-  })
-
-  const statusMutation = useMutation({
-    mutationFn: ({ monthKey, status }: { monthKey: string; status: MonthEntry['status'] }) =>
-      setMonthStatus(monthKey, status),
-    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ['months'] }),
   })
 
   const deleteMutation = useMutation({
     mutationFn: (monthKey: string) => deleteMonth(monthKey),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['months'] })
+      void queryClient.invalidateQueries({ queryKey: ['versions-by-month'] })
       setDeleteTarget(null)
     },
   })
@@ -117,32 +140,32 @@ export function MonthsPage() {
     return [...set].sort((a, b) => b - a)
   }, [months, currentYear])
 
-  const forYear = months.filter((m) => m.month_key.startsWith(String(activeYear)))
+  const forYear = useMemo(
+    () =>
+      months
+        .filter((m) => m.month_key.startsWith(String(activeYear)))
+        .sort((a, b) => (a.month_key < b.month_key ? -1 : 1)),
+    [months, activeYear],
+  )
+
+  const phaseCounts = useMemo(() => {
+    const map = new Map<MonthPhase | 'all', number>([['all', forYear.length]])
+    for (const p of PHASES) map.set(p, forYear.filter((m) => monthPhase(m.month_key) === p).length)
+    return map
+  }, [forYear])
+
+  const visible = phaseFilter === 'all' ? forYear : forYear.filter((m) => monthPhase(m.month_key) === phaseFilter)
   const firstName = (user?.name ?? '').split(' ')[0]
 
   return (
     <div className="shell">
       <AppHeader />
 
-      <div className="hero">
+      <div className="hero hero-compact">
         <AnimatedBackground density={0.00006} />
         <div className="container hero-inner">
           <h1>{t('welcome.greeting', { name: firstName })}</h1>
           <p>{t('welcome.subtitle')}</p>
-          <div className="hero-stats">
-            <span className="hero-stat">
-              <span className="hero-stat-value">{months.length}</span>
-              <span className="hero-stat-label">{t('welcome.statMonths')}</span>
-            </span>
-            <span className="hero-stat">
-              <span className="hero-stat-value">{months.filter((m) => m.status === 'active').length}</span>
-              <span className="hero-stat-label">{t('welcome.statActive')}</span>
-            </span>
-            <span className="hero-stat">
-              <span className="hero-stat-value">{currentYear}</span>
-              <span className="hero-stat-label">{t('welcome.statYear')}</span>
-            </span>
-          </div>
         </div>
       </div>
 
@@ -156,9 +179,31 @@ export function MonthsPage() {
                 </button>
               ))}
             </div>
-            <button className="btn btn-primary" onClick={() => setShowNew(true)}>
-              + {t('months.new')}
-            </button>
+
+            <div className="phase-filters">
+              <button
+                className={`kind-chip ${phaseFilter === 'all' ? 'is-active' : ''}`}
+                onClick={() => setPhaseFilter('all')}
+              >
+                {t('months.filter.all')} {phaseCounts.get('all') ?? 0}
+              </button>
+              {PHASES.map((p) => (
+                <button
+                  key={p}
+                  className={`kind-chip phase-${p} ${phaseFilter === p ? 'is-active' : ''}`}
+                  onClick={() => setPhaseFilter(p)}
+                >
+                  <span className="note-tab-dot" style={{ background: 'var(--nc)' }} />
+                  {t(`months.phase.${p}`)} {phaseCounts.get(p) ?? 0}
+                </button>
+              ))}
+            </div>
+
+            {canEdit && (
+              <button className="btn btn-primary months-new" onClick={() => setShowNew(true)}>
+                + {t('months.new')}
+              </button>
+            )}
           </div>
 
           {monthsQuery.isLoading && <p className="muted">{t('months.loading')}</p>}
@@ -168,40 +213,63 @@ export function MonthsPage() {
             </div>
           )}
 
-          <div className="month-grid">
-            {forYear.map((m) => (
-              <div className={`month-card rise-in ${m.status === 'archived' ? 'is-archived' : ''}`} key={m.month_key}>
-                <button className="month-card-btn" onClick={() => navigate(`/calendar/${m.month_key}`)}>
-                  <span>
-                    <span className="month-card-name">{monthName(m.month_key, locale)}</span>
-                    <br />
-                    <span className="month-card-year">{m.month_key}</span>
-                  </span>
-                  <span className={`pill ${m.status === 'archived' ? 'pill-neutral' : ''}`}>
-                    {t(`months.status.${m.status}`)}
-                  </span>
-                </button>
-                <MonthMenu
-                  month={m}
-                  onArchiveToggle={() =>
-                    statusMutation.mutate({
-                      monthKey: m.month_key,
-                      status: m.status === 'active' ? 'archived' : 'active',
-                    })
-                  }
-                  onDelete={() => setDeleteTarget(m)}
-                />
-              </div>
-            ))}
+          <div className="month-rows">
+            {visible.map((m) => {
+              const phase = monthPhase(m.month_key)
+              const approval = approvalOf(versionsQuery.data?.get(m.month_key) ?? [])
+              return (
+                <div className="month-row rise-in" key={m.month_key}>
+                  <button className="month-row-btn" onClick={() => navigate(`/calendar/${m.month_key}`)}>
+                    <span className="month-row-id">
+                      <span className="month-row-name">{monthName(m.month_key, locale)}</span>
+                      <span className="month-row-year">{m.month_key}</span>
+                    </span>
 
-            <button className="month-card-new" onClick={() => setShowNew(true)}>
-              <span className="month-card-new-plus">+</span>
-              {t('months.new')}
-            </button>
+                    <span className={`phase-pill phase-${phase}`}>{t(`months.phase.${phase}`)}</span>
+
+                    <span className="month-row-approval">
+                      {versionsQuery.isLoading ? (
+                        <span className="muted small">{t('common.loading')}</span>
+                      ) : approval.total === 0 ? (
+                        <>
+                          <span className="dot dot-idle" />
+                          {t('months.notStarted')}
+                        </>
+                      ) : approval.pending === 0 ? (
+                        <>
+                          <span className="dot dot-ok" />
+                          {t('months.allApproved')}
+                        </>
+                      ) : (
+                        <>
+                          <span className="dot dot-warn" />
+                          {t('months.pendingApproval', {
+                            count: approval.pending,
+                            where: approval.firstPending ?? '',
+                          })}
+                        </>
+                      )}
+                    </span>
+
+                    <span className="month-row-go" aria-hidden>
+                      →
+                    </span>
+                  </button>
+                  {canEdit && <MonthMenu onDelete={() => setDeleteTarget(m)} />}
+                </div>
+              )
+            })}
           </div>
 
-          {forYear.length === 0 && !monthsQuery.isLoading && !monthsQuery.isError && (
-            <p className="muted">{t('months.empty', { year: activeYear })}</p>
+          {visible.length === 0 && !monthsQuery.isLoading && !monthsQuery.isError && (
+            <div className="months-empty">
+              <p className="muted">{t('months.empty', { year: activeYear })}</p>
+              {canEdit && phaseFilter === 'all' && (
+                <button className="btn btn-primary" onClick={() => setShowNew(true)}>
+                  + {t('months.new')}
+                </button>
+              )}
+            </div>
           )}
         </div>
       </div>

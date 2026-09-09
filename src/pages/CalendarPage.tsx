@@ -1,6 +1,6 @@
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '../context/AuthContext'
 import { useI18n } from '../i18n/I18nContext'
 import { usePresence } from '../hooks/usePresence'
@@ -9,11 +9,24 @@ import { useUndoRedo } from '../hooks/useUndoRedo'
 import { AppHeader } from '../components/AppHeader'
 import { ChangeToasts } from '../components/ChangeToasts'
 import { CalendarGrid } from '../features/calendar/CalendarGrid'
+import { CalendarScopeBar } from '../features/calendar/CalendarScopeBar'
 import { FiltersPanel } from '../features/calendar/FiltersPanel'
 import { SidePanel } from '../features/calendar/SidePanel'
 import { applyChangeState } from '../lib/changelog'
-import { getMonth } from '../lib/store'
-import { BRANDS, CHANNELS, COUNTRIES, COUNTRY_LABELS, type Brand, type ChangeRecord, type Country } from '../types'
+import { createVersionFrom, getMonth, listVersions, setVersionStatus, type Scope } from '../lib/store'
+import { getMonthWeeks } from '../lib/dateUtils'
+import {
+  BRANDS,
+  calendarStatus,
+  CHANNELS,
+  COUNTRIES,
+  COUNTRY_LABELS,
+  LATAM_PARTS,
+  type Brand,
+  type ChangeRecord,
+  type Country,
+  type VersionEntry,
+} from '../types'
 
 type MobileTab = 'calendar' | 'detail'
 
@@ -27,20 +40,43 @@ export function CalendarPage() {
   const [brand, setBrand] = useState<Brand>(BRANDS[0])
   const [country, setCountry] = useState<Country>(COUNTRIES[0])
   const [channel, setChannel] = useState<string>(CHANNELS[0])
+  const [versionId, setVersionId] = useState<string | null>(null)
+  const [latamView, setLatamView] = useState(false)
   const [mobileTab, setMobileTab] = useState<MobileTab>('calendar')
   const [collapsed, setCollapsed] = useState(false)
 
   const monthQuery = useQuery({ queryKey: ['month', monthKey], queryFn: () => getMonth(monthKey), enabled: !!monthKey })
+  const versionsQuery = useQuery({
+    queryKey: ['versions', monthKey],
+    queryFn: () => listVersions(monthKey),
+    enabled: !!monthKey,
+  })
 
-  const monthLabel = (() => {
+  const versions = useMemo(() => versionsQuery.data ?? [], [versionsQuery.data])
+  const version: VersionEntry | null = useMemo(() => {
+    if (versions.length === 0) return null
+    return versions.find((v) => v.version_id === versionId) ?? versions[versions.length - 1]
+  }, [versions, versionId])
+
+  // Fuera de las regiones que componen LATAM, la vista agregada no aplica.
+  useEffect(() => {
+    if (!LATAM_PARTS.includes(country)) setLatamView(false)
+  }, [country])
+
+  const weeks = useMemo(() => getMonthWeeks(monthKey), [monthKey])
+
+  const monthLabel = useMemo(() => {
     const [y, m] = monthKey.split('-').map(Number)
     if (!y || !m) return monthKey
     const label = new Date(y, m - 1, 1).toLocaleDateString(locale, { month: 'long', year: 'numeric' })
     return label.charAt(0).toUpperCase() + label.slice(1)
-  })()
+  }, [monthKey, locale])
 
-  // "Dónde está" cada usuario, en texto legible para la tarjeta de presencia.
-  const whereLabel = `${monthLabel} · ${brand} · ${COUNTRY_LABELS[country]}`
+  const scope: Scope | null = version ? { versionId: version.version_id, brand, country } : null
+
+  const whereLabel = `${monthLabel} · ${version?.letter ?? '—'} · ${brand} · ${
+    latamView ? 'LATAM' : COUNTRY_LABELS[country]
+  }`
 
   const presence = usePresence(
     monthKey,
@@ -49,12 +85,12 @@ export function CalendarPage() {
   ).filter((p) => p.uid !== user?.uid)
 
   const changes = useChanges(monthKey)
-  const myChanges = changes.filter((c) => c.user_email === user?.email)
+  const myChanges = useMemo(() => changes.filter((c) => c.user_email === user?.email), [changes, user?.email])
 
   const refreshData = useCallback(() => {
-    void queryClient.invalidateQueries({ queryKey: ['plan', monthKey] })
-    void queryClient.invalidateQueries({ queryKey: ['notas', monthKey] })
-    void queryClient.invalidateQueries({ queryKey: ['escenarios', monthKey] })
+    for (const key of ['plan', 'notas', 'escenarios', 'results', 'creative']) {
+      void queryClient.invalidateQueries({ queryKey: [key, monthKey] })
+    }
   }, [queryClient, monthKey])
 
   const author = useMemo(
@@ -71,8 +107,28 @@ export function CalendarPage() {
     [author, refreshData],
   )
 
-  // Solo es "no encontrado" si la consulta funcionó y el mes no existe;
-  // si falló (permisos, red) hay que decirlo, no fingir que no existe.
+  const status = version ? calendarStatus(version, brand, country) : 'maybe'
+
+  const statusMutation = useMutation({
+    mutationFn: () => {
+      if (!version || !scope) throw new Error('sin version')
+      return setVersionStatus(monthKey, version, scope, status === 'approved' ? 'maybe' : 'approved', author)
+    },
+    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ['versions', monthKey] }),
+  })
+
+  const newVersionMutation = useMutation({
+    mutationFn: () => {
+      if (!version) throw new Error('sin version')
+      return createVersionFrom(monthKey, version, author)
+    },
+    onSuccess: (created) => {
+      setVersionId(created.version_id)
+      void queryClient.invalidateQueries({ queryKey: ['versions', monthKey] })
+      refreshData()
+    },
+  })
+
   if (monthQuery.isSuccess && !monthQuery.data) {
     return (
       <div className="shell">
@@ -131,11 +187,50 @@ export function CalendarPage() {
         </div>
 
         <div className={`col ${mobileTab === 'calendar' ? '' : 'is-mobile-hidden'}`}>
-          <CalendarGrid monthKey={monthKey} brand={brand} country={country} channel={channel} />
+          <div className="panel">
+            {version && scope ? (
+              <>
+                <CalendarScopeBar
+                  brand={brand}
+                  country={country}
+                  versions={versions}
+                  version={version}
+                  status={status}
+                  onSelectVersion={(v) => setVersionId(v.version_id)}
+                  onToggleStatus={() => statusMutation.mutate()}
+                  onCreateVersion={() => newVersionMutation.mutate()}
+                  creatingVersion={newVersionMutation.isPending}
+                  latamView={latamView}
+                  onToggleLatamView={() => setLatamView((v) => !v)}
+                  latamAvailable={LATAM_PARTS.includes(country)}
+                />
+                <CalendarGrid
+                  monthKey={monthKey}
+                  scope={scope}
+                  version={version}
+                  channel={channel}
+                  onChannelChange={setChannel}
+                  latamView={latamView}
+                />
+              </>
+            ) : (
+              <div className="panel-body">
+                <p className="muted">{t('common.loading')}</p>
+              </div>
+            )}
+          </div>
         </div>
 
         <div className={`col ${mobileTab === 'detail' ? '' : 'is-mobile-hidden'}`}>
-          <SidePanel monthKey={monthKey} brand={brand} country={country} channel={channel} />
+          {version && scope ? (
+            <SidePanel monthKey={monthKey} scope={scope} version={version} weeks={weeks} latamView={latamView} />
+          ) : (
+            <aside className="panel">
+              <div className="panel-body">
+                <p className="muted">{t('common.loading')}</p>
+              </div>
+            </aside>
+          )}
         </div>
       </div>
 
