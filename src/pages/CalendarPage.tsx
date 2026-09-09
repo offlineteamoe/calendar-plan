@@ -199,6 +199,7 @@ export function CalendarPage() {
                 <CalendarScopeBar
                   brand={brand}
                   country={country}
+                  channel={channel}
                   versions={versions}
                   version={version}
                   status={status}

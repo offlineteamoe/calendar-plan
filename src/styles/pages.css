@@ -392,12 +392,6 @@
   font-size: 13px;
   font-weight: 700;
 }
-.cal-total {
-  font-family: var(--font-display);
-  font-weight: 800;
-  font-size: 15px;
-  font-variant-numeric: tabular-nums;
-}
 .cal-grid {
   flex: 1;
   min-height: 0;
@@ -880,6 +874,12 @@
   color: var(--ink-faint);
   flex-shrink: 0;
 }
+/* Dentro del calendario esta banda es solo aire antes de la primera semana:
+   los nombres de los días viven en el subencabezado, que es más alto. */
+.cal-grid > .aligned-weekhead {
+  height: calc(var(--h-weekhead) - 8px);
+  min-height: calc(var(--h-weekhead) - 8px);
+}
 .aligned-weeks {
   flex: 1;
   min-height: 0;
@@ -1112,20 +1112,6 @@
   background: var(--accent-soft);
   color: var(--accent);
   border-color: var(--accent);
-}
-.cal-subhead {
-  justify-content: space-between;
-}
-.cal-channel {
-  font-family: var(--font-display);
-  font-size: 12px;
-  font-weight: 700;
-}
-.cal-total-wrap {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  margin-left: auto;
 }
 .cal-readonly {
   color: var(--ink-soft);
@@ -1825,4 +1811,55 @@
 }
 .week-composer-actions .note-act-add {
   margin-left: 0;
+}
+
+
+/* ============ Cabecera de días del calendario ============ */
+
+/* Las mismas columnas que las celdas, para que cada nombre caiga sobre su día. */
+.cal-daynames {
+  display: grid;
+  grid-template-columns: 30px repeat(7, minmax(0, 1fr));
+  gap: 5px;
+  padding: 0 12px;
+  align-items: center;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  border-bottom: 1px solid var(--border);
+}
+.cal-daynames > span {
+  text-align: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* El calendario ya no tiene barra propia: el aviso de guardado flota sobre la
+   grilla en vez de ocupar una fila para sí. */
+.cal-grid {
+  position: relative;
+}
+.cal-saving {
+  position: absolute;
+  top: 2px;
+  right: 12px;
+  z-index: 2;
+  padding: 2px 9px;
+  border-radius: 100px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-family: var(--font-display);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.scope-channel {
+  font-family: var(--font-display);
+  font-weight: 700;
+  color: var(--ink);
 }

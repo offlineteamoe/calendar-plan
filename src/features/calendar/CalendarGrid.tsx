@@ -46,13 +46,11 @@ export function CalendarGrid({ monthKey, scope, version, channel, latamView }: P
 
   const rows = planQuery.data
   const spendByDate = new Map<string, number>()
-  let monthTotal = 0
   for (const r of rows) {
     if (r.brand !== scope.brand || r.channel !== channel) continue
     const inScope = latamView ? LATAM_PARTS.includes(r.country) : r.country === scope.country
     if (!inScope) continue
     spendByDate.set(r.date, (spendByDate.get(r.date) ?? 0) + r.planned_spend)
-    if (isInMonth(r.date, monthKey)) monthTotal += r.planned_spend
   }
 
   const weeks = getMonthWeeks(monthKey)
@@ -60,13 +58,15 @@ export function CalendarGrid({ monthKey, scope, version, channel, latamView }: P
 
   return (
     <>
-      <div className="aligned-subhead cal-subhead">
-        <span className="cal-channel">{channel}</span>
-        {saveMutation.isPending && <span className="muted small">{t('calendar.saving')}</span>}
-        <span className="cal-total-wrap">
-          <span className="muted small">{t('calendar.monthTotal')}</span>
-          <span className="cal-total">${monthTotal.toLocaleString(locale)}</span>
-        </span>
+      {/* Los nombres de los días ocupan la banda del subencabezado: es la misma
+          altura que usa el panel de la derecha, así que las semanas siguen
+          alineadas, y así el calendario tiene una cabecera de calendario de
+          verdad en vez de una etiqueta suelta. */}
+      <div className="aligned-subhead cal-daynames">
+        <span />
+        {dayNames.map((d) => (
+          <span key={d}>{d}</span>
+        ))}
       </div>
 
       {saveMutation.isError && (
@@ -76,12 +76,10 @@ export function CalendarGrid({ monthKey, scope, version, channel, latamView }: P
       )}
 
       <div className="cal-grid">
-        <div className="cal-row aligned-weekhead">
-          <span />
-          {dayNames.map((d) => (
-            <span key={d}>{d}</span>
-          ))}
-        </div>
+        {saveMutation.isPending && <span className="cal-saving">{t('calendar.saving')}</span>}
+        {/* Hueco que mantiene el ritmo vertical compartido con el panel de la
+            derecha; visualmente es el aire entre los días y la primera semana. */}
+        <div className="aligned-weekhead" aria-hidden />
 
         <div className="aligned-weeks">
           {weeks.map((week) => (

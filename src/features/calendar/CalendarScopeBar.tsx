@@ -6,6 +6,8 @@ import { useRole } from '../../hooks/useRole'
 interface Props {
   brand: Brand
   country: Country
+  /** Canal abierto: forma parte de qué calendario estás viendo. */
+  channel: string
   versions: VersionEntry[]
   version: VersionEntry
   /** Estado de ESTE calendario (versión + marca + región), no de la versión entera. */
@@ -27,6 +29,7 @@ interface Props {
 export function CalendarScopeBar({
   brand,
   country,
+  channel,
   versions,
   version,
   status,
@@ -107,6 +110,8 @@ export function CalendarScopeBar({
           <strong>{brand}</strong>
           <span className="scope-sep">·</span>
           {latamView ? t('latam.viewing') : COUNTRY_LABELS[country]}
+          <span className="scope-sep">·</span>
+          <span className="scope-channel">{channel}</span>
         </span>
       </div>
 
