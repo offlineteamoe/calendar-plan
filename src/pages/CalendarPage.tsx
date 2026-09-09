@@ -2,7 +2,6 @@ import { useState } from 'react'
 import { useAuth } from '../context/AuthContext'
 import { usePresence } from '../hooks/usePresence'
 import { useActivityFeed } from '../hooks/useActivityFeed'
-import { PresenceBar } from '../components/PresenceBar'
 import { ActivityToast } from '../components/ActivityToast'
 import { CalendarGrid } from '../components/CalendarGrid'
 import { SidePanel } from '../components/SidePanel'
@@ -27,13 +26,14 @@ export function CalendarPage({ month, onBack }: Props) {
   const [country, setCountry] = useState<Country>(COUNTRIES[0])
   const [channel, setChannel] = useState(CHANNELS[0])
   const [mobileTab, setMobileTab] = useState<MobileTab>('calendar')
+  const [filtersCollapsed, setFiltersCollapsed] = useState(false)
 
   const currentView = `${brand}-${country}`
   const presenceUsers = usePresence(
     month.month_key,
     user ? { uid: user.uid, name: user.name, email: user.email, initials: user.initials } : null,
     currentView,
-  )
+  ).filter((p) => p.uid !== user?.uid) // no duplicar mi propio avatar: ya está en el menú de perfil
   const activityEvents = useActivityFeed(month.month_key)
 
   return (
@@ -47,7 +47,8 @@ export function CalendarPage({ month, onBack }: Props) {
             <h1 className="page-title">{month.month_key}</h1>
           </div>
         }
-        extra={<PresenceBar users={presenceUsers} />}
+        presenceUsers={presenceUsers}
+        historyEvents={activityEvents}
       />
 
       <div className="mobile-tabs">
@@ -59,7 +60,7 @@ export function CalendarPage({ month, onBack }: Props) {
         </button>
       </div>
 
-      <div className="calendar-layout">
+      <div className={`calendar-layout ${filtersCollapsed ? 'filters-collapsed' : ''}`}>
         <FiltersPanel
           brand={brand}
           country={country}
@@ -67,6 +68,8 @@ export function CalendarPage({ month, onBack }: Props) {
           onBrandChange={setBrand}
           onCountryChange={setCountry}
           onChannelChange={setChannel}
+          collapsed={filtersCollapsed}
+          onToggleCollapsed={() => setFiltersCollapsed((v) => !v)}
         />
 
         <div className={`cal-slot ${mobileTab === 'calendar' ? '' : 'mobile-hidden'}`}>

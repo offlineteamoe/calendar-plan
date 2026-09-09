@@ -1,15 +1,17 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { createMonth, deleteMonth, listMonths, setMonthStatus } from '../lib/store'
 import { useAuth } from '../context/AuthContext'
 import type { MonthEntry } from '../types'
 import { AppHeader } from '../components/AppHeader'
+import { NewMonthModal } from '../components/NewMonthModal'
+import { ConfirmDeleteModal } from '../components/ConfirmDeleteModal'
 import { useI18n } from '../i18n/I18nContext'
 
 function formatMonthLabel(monthKey: string, locale: string): string {
   const [year, month] = monthKey.split('-').map(Number)
   const date = new Date(year, month - 1, 1)
-  const label = date.toLocaleDateString(locale, { month: 'long', year: 'numeric' })
+  const label = date.toLocaleDateString(locale, { month: 'long' })
   return label.charAt(0).toUpperCase() + label.slice(1)
 }
 
@@ -39,7 +41,7 @@ function MonthCardMenu({ month, onArchiveToggle, onDelete }: { month: MonthEntry
         ⋮
       </button>
       {open && (
-        <div className="dropdown-menu" onClick={(e) => e.stopPropagation()}>
+        <div className="dropdown-menu month-card-dropdown" onClick={(e) => e.stopPropagation()}>
           <button
             className="dropdown-item"
             onClick={() => {
@@ -68,8 +70,10 @@ export function MonthSelectorPage({ onOpenMonth }: { onOpenMonth: (entry: MonthE
   const { user } = useAuth()
   const { t, locale } = useI18n()
   const queryClient = useQueryClient()
-  const [newMonthKey, setNewMonthKey] = useState(() => new Date().toISOString().slice(0, 7))
-  const [showNewMonthForm, setShowNewMonthForm] = useState(false)
+  const [showNewMonthModal, setShowNewMonthModal] = useState(false)
+  const [deleteTarget, setDeleteTarget] = useState<MonthEntry | null>(null)
+  const currentYear = new Date().getFullYear()
+  const [activeYear, setActiveYear] = useState(currentYear)
 
   const monthsQuery = useQuery({ queryKey: ['months'], queryFn: listMonths })
 
@@ -77,7 +81,7 @@ export function MonthSelectorPage({ onOpenMonth }: { onOpenMonth: (entry: MonthE
     mutationFn: (monthKey: string) => createMonth(monthKey, user?.email ?? 'desconocido'),
     onSuccess: (entry) => {
       void queryClient.invalidateQueries({ queryKey: ['months'] })
-      setShowNewMonthForm(false)
+      setShowNewMonthModal(false)
       onOpenMonth(entry)
     },
   })
@@ -89,61 +93,90 @@ export function MonthSelectorPage({ onOpenMonth }: { onOpenMonth: (entry: MonthE
 
   const deleteMutation = useMutation({
     mutationFn: (monthKey: string) => deleteMonth(monthKey),
-    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ['months'] }),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['months'] })
+      setDeleteTarget(null)
+    },
   })
+
+  const years = useMemo(() => {
+    const set = new Set<number>([currentYear])
+    for (const m of monthsQuery.data ?? []) set.add(Number(m.month_key.slice(0, 4)))
+    return [...set].sort((a, b) => b - a)
+  }, [monthsQuery.data, currentYear])
+
+  const monthsForYear = (monthsQuery.data ?? []).filter((m) => m.month_key.startsWith(String(activeYear)))
+  const firstName = (user?.name ?? '').split(' ')[0]
 
   return (
     <div className="app-shell">
-      <AppHeader start={<h1 className="page-title">{t('months.title')}</h1>} />
+      <AppHeader />
+
+      <div className="hero">
+        <div className="hero-blob hero-blob-1" />
+        <div className="hero-blob hero-blob-2" />
+        <div className="hero-blob hero-blob-3" />
+        <div className="hero-content">
+          <h1>{t('welcome.title', { name: firstName })}</h1>
+          <p>{t('welcome.subtitle')}</p>
+        </div>
+      </div>
+
       <div className="page">
+        <div className="year-tabs">
+          {years.map((y) => (
+            <button key={y} className={y === activeYear ? 'year-tab-active' : ''} onClick={() => setActiveYear(y)}>
+              {y}
+            </button>
+          ))}
+        </div>
+
         {monthsQuery.isLoading && <p>{t('months.loading')}</p>}
         {monthsQuery.isError && <p className="error-text">{t('months.loadError')}</p>}
 
-        <ul className="month-list">
-          {monthsQuery.data?.map((m) => (
-            <li key={m.month_key}>
-              <div className="month-card">
-                <button className="month-card-main" onClick={() => onOpenMonth(m)}>
-                  <span className="month-card-title">{formatMonthLabel(m.month_key, locale)}</span>
-                  <span className={`status-pill status-${m.status}`}>{t(`months.status.${m.status}`)}</span>
-                </button>
-                <MonthCardMenu
-                  month={m}
-                  onArchiveToggle={() =>
-                    statusMutation.mutate({ monthKey: m.month_key, status: m.status === 'active' ? 'archived' : 'active' })
-                  }
-                  onDelete={() => {
-                    if (window.confirm(t('months.confirmDelete'))) deleteMutation.mutate(m.month_key)
-                  }}
-                />
-              </div>
-            </li>
-          ))}
-          {monthsQuery.data?.length === 0 && <p className="muted">{t('months.empty')}</p>}
-        </ul>
-
-        {showNewMonthForm ? (
-          <div className="new-month-form">
-            <label>
-              {t('months.newLabel')}
-              <input type="month" value={newMonthKey} onChange={(e) => setNewMonthKey(e.target.value)} />
-            </label>
-            <div className="form-actions">
-              <button className="btn-secondary" onClick={() => setShowNewMonthForm(false)}>
-                {t('months.cancel')}
+        <div className="month-grid">
+          {monthsForYear.map((m) => (
+            <div className="month-tile" key={m.month_key}>
+              <button className="month-tile-main" onClick={() => onOpenMonth(m)}>
+                <span className="month-tile-name">{formatMonthLabel(m.month_key, locale)}</span>
+                <span className={`status-pill status-${m.status}`}>{t(`months.status.${m.status}`)}</span>
               </button>
-              <button className="btn-primary" disabled={createMonthMutation.isPending} onClick={() => createMonthMutation.mutate(newMonthKey)}>
-                {createMonthMutation.isPending ? t('months.creating') : t('months.create')}
-              </button>
+              <MonthCardMenu
+                month={m}
+                onArchiveToggle={() => statusMutation.mutate({ monthKey: m.month_key, status: m.status === 'active' ? 'archived' : 'active' })}
+                onDelete={() => setDeleteTarget(m)}
+              />
             </div>
-            {createMonthMutation.isError && <p className="error-text">{(createMonthMutation.error as Error).message}</p>}
-          </div>
-        ) : (
-          <button className="btn-primary" onClick={() => setShowNewMonthForm(true)}>
-            {t('months.new')}
+          ))}
+
+          <button className="month-tile month-tile-new" onClick={() => setShowNewMonthModal(true)}>
+            <span className="month-tile-new-icon">+</span>
+            <span>{t('months.new')}</span>
           </button>
+        </div>
+
+        {monthsForYear.length === 0 && !monthsQuery.isLoading && !monthsQuery.isError && (
+          <p className="muted">{t('months.empty', { year: activeYear })}</p>
         )}
       </div>
+
+      {showNewMonthModal && (
+        <NewMonthModal
+          onClose={() => setShowNewMonthModal(false)}
+          onConfirm={(monthKey) => createMonthMutation.mutate(monthKey)}
+          isPending={createMonthMutation.isPending}
+          errorMessage={createMonthMutation.isError ? (createMonthMutation.error as Error).message : undefined}
+        />
+      )}
+
+      {deleteTarget && (
+        <ConfirmDeleteModal
+          monthLabel={formatMonthLabel(deleteTarget.month_key, locale)}
+          onClose={() => setDeleteTarget(null)}
+          onConfirmed={() => deleteMutation.mutate(deleteTarget.month_key)}
+          isPending={deleteMutation.isPending}
+        />
+      )}
     </div>
   )
 }

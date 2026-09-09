@@ -69,35 +69,37 @@ export function CalendarGrid({ monthKey, brand, country, channel }: Props) {
         ))}
       </div>
 
-      {weeks.map((week) => (
-        <div className="calendar-week-row" key={week.weekStart}>
-          <span className="week-number-col">S{isoWeekNumber(week.weekStart)}</span>
-          {week.days.map((date) => {
-            const inMonth = isInMonth(date, monthKey)
-            const value = spendByDate.get(date)
-            return (
-              <div key={date} className={`calendar-day-cell ${inMonth ? '' : 'calendar-day-outside'}`}>
-                <span className="calendar-day-number">{Number(date.slice(-2))}</span>
-                {inMonth && (
-                  <input
-                    key={`${date}-${value ?? ''}`}
-                    type="number"
-                    className="calendar-day-input"
-                    defaultValue={value ?? ''}
-                    placeholder="0"
-                    min={0}
-                    onBlur={(e) => {
-                      const next = Number(e.target.value) || 0
-                      if (next === (value ?? 0)) return
-                      saveMutation.mutate({ date, spend: next })
-                    }}
-                  />
-                )}
-              </div>
-            )
-          })}
-        </div>
-      ))}
+      <div className="calendar-weeks">
+        {weeks.map((week) => (
+          <div className="calendar-week-row" key={week.weekStart}>
+            <span className="week-number-col">S{isoWeekNumber(week.weekStart)}</span>
+            {week.days.map((date) => {
+              const inMonth = isInMonth(date, monthKey)
+              const value = spendByDate.get(date)
+              return (
+                <div key={date} className={`calendar-day-cell ${inMonth ? '' : 'calendar-day-outside'}`}>
+                  <span className="calendar-day-number">{Number(date.slice(-2))}</span>
+                  {inMonth && (
+                    <input
+                      key={`${date}-${value ?? ''}`}
+                      type="number"
+                      className="calendar-day-input"
+                      defaultValue={value ?? ''}
+                      placeholder="0"
+                      min={0}
+                      onBlur={(e) => {
+                        const next = Number(e.target.value) || 0
+                        if (next === (value ?? 0)) return
+                        saveMutation.mutate({ date, spend: next })
+                      }}
+                    />
+                  )}
+                </div>
+              )
+            })}
+          </div>
+        ))}
+      </div>
     </div>
   )
 }

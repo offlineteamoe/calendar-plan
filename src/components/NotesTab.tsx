@@ -5,6 +5,7 @@ import { logActivity } from '../hooks/useActivityFeed'
 import type { NotaCategory, NotaRow } from '../types'
 import { useAuth } from '../context/AuthContext'
 import { useI18n } from '../i18n/I18nContext'
+import { currentWeekStart } from '../lib/dateUtils'
 
 const CATEGORIES: NotaCategory[] = ['general', 'promo', 'channel_toggle', 'rationale']
 
@@ -16,7 +17,7 @@ export function NotesTab({ monthKey }: Props) {
   const { user } = useAuth()
   const { t } = useI18n()
   const queryClient = useQueryClient()
-  const [weekStart, setWeekStart] = useState('')
+  const [weekStart, setWeekStart] = useState(currentWeekStart)
   const [category, setCategory] = useState<NotaCategory>('general')
   const [content, setContent] = useState('')
 

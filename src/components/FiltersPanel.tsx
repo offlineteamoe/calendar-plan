@@ -10,13 +10,29 @@ interface Props {
   onBrandChange: (b: Brand) => void
   onCountryChange: (c: Country) => void
   onChannelChange: (c: string) => void
+  collapsed: boolean
+  onToggleCollapsed: () => void
 }
 
 /** Columna de filtros (0–15% del layout de escritorio; barra horizontal en mobile). */
-export function FiltersPanel({ brand, country, channel, onBrandChange, onCountryChange, onChannelChange }: Props) {
+export function FiltersPanel({ brand, country, channel, onBrandChange, onCountryChange, onChannelChange, collapsed, onToggleCollapsed }: Props) {
   const { t } = useI18n()
+
+  if (collapsed) {
+    return (
+      <aside className="filters-panel filters-panel-collapsed">
+        <button className="icon-btn filters-collapse-btn" onClick={onToggleCollapsed} title={t('calendar.brand')}>
+          »
+        </button>
+      </aside>
+    )
+  }
+
   return (
     <aside className="filters-panel">
+      <button className="icon-btn filters-collapse-btn" onClick={onToggleCollapsed} title="—">
+        «
+      </button>
       <label className="filter-field">
         <span>{t('calendar.brand')}</span>
         <select value={brand} onChange={(e) => onBrandChange(e.target.value as Brand)}>

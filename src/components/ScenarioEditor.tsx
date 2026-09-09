@@ -5,6 +5,7 @@ import { logActivity } from '../hooks/useActivityFeed'
 import type { Brand, EscenarioRow } from '../types'
 import { useAuth } from '../context/AuthContext'
 import { useI18n } from '../i18n/I18nContext'
+import { currentWeekStart } from '../lib/dateUtils'
 
 interface Props {
   monthKey: string
@@ -22,7 +23,7 @@ export function ScenarioEditor({ monthKey, brand }: Props) {
   const { user } = useAuth()
   const { t } = useI18n()
   const queryClient = useQueryClient()
-  const [weekStart, setWeekStart] = useState('')
+  const [weekStart, setWeekStart] = useState(currentWeekStart)
   const [description, setDescription] = useState('')
   const [weeklySpend, setWeeklySpend] = useState('')
 

@@ -16,6 +16,11 @@ function mondayOf(d: Date): Date {
   return date
 }
 
+/** Lunes de la semana actual — para prellenar campos de fecha en vez de dejarlos vacíos. */
+export function currentWeekStart(): string {
+  return toIsoDate(mondayOf(new Date()))
+}
+
 export interface CalendarWeek {
   weekStart: string // lunes, YYYY-MM-DD
   days: string[] // 7 fechas YYYY-MM-DD, lunes a domingo
