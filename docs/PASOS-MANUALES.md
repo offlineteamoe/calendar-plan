@@ -33,6 +33,10 @@ estas reglas. Es el paso que más importa.
 > No escribas las reglas a mano en ese editor: autocompleta llaves y termina
 > duplicando bloques. Copiar y pegar entero, siempre.
 
+> **Las reglas cambiaron después de la primera versión de este documento.** Si
+> ya las publicaste antes, vuelve a hacerlo: ahora incluyen quién puede editar
+> cada nota y el registro de actividad.
+
 **Cómo verificar que quedó:** entra a la herramienta con una cuenta que **no**
 sea de los tres administradores. En la cabecera debe aparecer la etiqueta
 `SOLO CONSULTA`, no debe verse el botón "+ Nuevo mes", y dentro de un
@@ -160,3 +164,23 @@ solución es del lado de Google Cloud, no del código.
 | Tu cuenta, pestaña Notas | Ves esa observación junto a las demás notas |
 | Escribir una nota en español y cambiar el idioma a inglés | Con el paso 3 hecho, la nota aparece traducida a los pocos segundos |
 | Dos personas en el mismo mes | Cada una ve el avatar de la otra en la cabecera |
+| Cambiar un calendario de aprobado a maybe | La otra persona lo ve cambiar **sin recargar** |
+| La campanita del encabezado | Cuenta lo que hicieron los demás y lo explica en palabras |
+| Perfil → Registro de actividad | Solo aparece si tu cuenta es administradora |
+
+
+---
+
+## Paso 5 — Si el registro de actividad pide un índice
+
+La pantalla de **Registro de actividad** (solo administradores) lee los
+cambios de todos los meses de una vez. Es la única consulta de la app que
+puede pedir un índice de Firestore.
+
+Si al abrirla ves un error que menciona *"The query requires an index"*, ese
+mismo mensaje trae un enlace directo: ábrelo, pulsa **Crear índice** y espera
+uno o dos minutos. No hay nada que escribir.
+
+El resto de la aplicación —campanita, historial de notas, calendario— está
+escrito a propósito para no necesitar ningún índice, así que si algo más falla
+no es por esto.

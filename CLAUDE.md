@@ -1,92 +1,163 @@
-# Plan de Pauta — contexto para Claude Code
+# Offline Planning — contexto para Claude Code
 
-Calendario web que reemplaza el Excel manual de planificación de pauta offline
-(`Plan Sep 2026 - Proyecto Atribución.xlsm`). Sin servidor propio: vive en
-GitHub Pages y usa Firebase (Firestore) tanto para los datos del plan como
-para presencia/actividad en tiempo real. Ver el plan de arquitectura original
-en `C:\Users\william.fonseca\.claude\plans\magical-popping-turtle.md` para el
-razonamiento detrás de la primera versión (basada en Google Sheets) — esa
-versión se reemplazó por Firestore antes de terminar la Fase 1: más simple de
-configurar (nada de Sheets que crear/compartir), tiempo real de verdad
-(`onSnapshot` en vez de "algo cambió, vuelve a leer"), y login en un solo
-paso. Lo único que se perdió con el cambio: ya no hay una hoja de cálculo
-cruda que alguien pueda abrir fuera de la app para mirar/editar filas a mano.
+Herramienta web de planificación de medios del equipo Offline de Open English.
+Reemplaza el Excel mensual manual (`Plan Sep 2026 - Proyecto Atribución.xlsm`).
 
-## Regla de oro: dónde vive cada dato
+**Sin servidor propio.** Se publica como sitio estático en GitHub Pages y usa
+Firebase (Auth + Firestore) para los datos, la presencia y la actividad en
+tiempo real. Si algo parece necesitar un backend, es señal de que se está
+resolviendo mal para esta arquitectura.
 
-Todo vive en **Firestore**, bajo `months/{monthKey}/<colección>/<docId>` (ver
-`src/types.ts` → `COLLECTIONS` y `src/lib/store.ts`):
-- `plan`, `escenario`, `nota`, `bloqueo` — datos activos en Fase 1.
-- `real`, `results`, `creative` — el esquema existe pero se dejan vacíos a
-  propósito hasta la fase 2 (ver más abajo).
+- Repo: `github.com/offlineteamoe/calendar-plan` (rama `main`)
+- Publicado: `https://offlineteamoe.github.io/calendar-plan/`
+- Proyecto Firebase: `calendar-plan-c36b5`
+- Carpeta de trabajo: `C:\Users\william.fonseca\Projects\media-plan-calendar`
+  (**no** en la unidad G: — `npm install` falla ahí por bloqueo de archivos de
+  Google Drive)
 
-Presencia y actividad (`presence/{monthKey}/users/{uid}`,
-`activity/{monthKey}/events/{id}`) son colecciones aparte, deliberadamente
-top-level en vez de anidadas bajo `months/` — son efímeras, nunca hay que
-tratarlas como un dato de negocio a conservar.
+Documentos hermanos, léelos antes de tocar datos o pedirle pasos al usuario:
+- `docs/DATA-MODEL.md` — el esquema completo de Firestore, campo por campo.
+- `docs/PASOS-MANUALES.md` — lo que solo puede hacer el usuario en las
+  consolas de Google/GitHub, con links exactos.
+- `docs/DECISIONES.md` — por qué la app es como es (y qué se descartó).
 
-**No hay backend propio.** Todo el código corre en el navegador con la
-sesión de Firebase Auth del usuario (`src/lib/firebaseClient.ts`,
-`src/lib/store.ts`, `src/hooks/*`). Si algo parece necesitar un servidor, es
-señal de que se está resolviendo mal para esta arquitectura.
+## Quién es el usuario
 
-## Autenticación
+William Fonseca lidera la planificación offline. Revisa el diseño con criterio
+de usuario final y es directo cuando algo no sirve. Lo que ha pedido de forma
+repetida y **no** hay que volver a discutir:
 
-Un solo paso (`src/context/AuthContext.tsx` → `signInWithGoogle()` en
-`src/lib/firebaseClient.ts`): popup de Firebase Auth con Google, y
-`onAuthStateChanged` avisa el resultado — incluida la restauración de sesión
-en visitas siguientes, sin lógica propia de renovación de tokens.
+- Usar **toda** la pantalla; nada de islas centradas.
+- Nada redundante (dos botones que hacen lo mismo en la misma vista).
+- Estados con significado de negocio, no etiquetas técnicas.
+- Toda acción visible y con nombre; que no haya que deducirla de un icono.
+- Para pasos manuales: link exacto + texto listo para pegar. **Nunca** teclear
+  dentro de un editor de código de una consola web (autocompleta llaves y
+  corrompe el contenido; ya pasó con las reglas de Firestore).
 
-El control de dominio real (`@openenglish.com`) pasa por dos lugares
-distintos, no por chequeos en el código:
-- El OAuth consent screen del proyecto de Google Cloud detrás de Firebase
-  debe estar en modo **Internal** (ver README — reutiliza el mismo proyecto
-  que ya usa `PPT HTML`).
-- Las reglas en `firestore.rules` (deben desplegarse manualmente o vía
-  `firebase deploy --only firestore:rules`) — `isOeUser()` se chequea en
-  cada regla, nunca alcanza con `request.auth != null`.
+Verifica visualmente con captura de pantalla antes de dar algo por entregado.
 
-## Configuración
+## Reglas de negocio que no se pueden romper
 
-Todo lo que depende del proyecto de Firebase vive en variables de entorno
-(`src/config.ts`, `.env.example`). Nunca hardcodear la config de Firebase
-directamente en el código — así el proyecto se puede reapuntar a otro
-proyecto de Firebase, o mover de repo, sin tocar una línea.
+**Roles.** Tres cuentas administran (`src/lib/roles.ts` → `BOOTSTRAP_ADMINS`,
+duplicadas a propósito en `firestore.rules`; la lista viva está en
+`config/roles`). El resto del dominio **solo consulta**: no crea meses, no
+edita el plan, no aprueba. Lo único que puede escribir es una nota de
+categoría `observacion`.
 
-## Convenciones al tocar código
+**El dominio incluye subdominios.** Hay cuentas en `@openenglish.com` y en
+`@business.openenglish.com`. La comprobación exige el punto separador para que
+`notopenenglish.com` no cuele (`isAllowedDomainEmail`).
 
-- Toda fecha en formato `YYYY-MM-DD` (ver `src/lib/dateUtils.ts`).
-- `month_key` de un plan mensual = `YYYY-MM` (ej. `2026-09`), y es también el
-  id del documento `months/{monthKey}`.
-- IDs de documento determinísticos donde tiene sentido (evita tener que
-  buscar antes de escribir): `Plan` usa `${date}_${brand}_${country}_${channel}`
-  (ver `planDocId` en `store.ts`); `Escenario` y `Nota` usan su propio
-  `scenario_id`/`note_id` (`crypto.randomUUID()` generado en el cliente).
-- "Crear un mes" es solo registrar `months/{monthKey}` — a diferencia de un
-  Sheet, una colección de Firestore no tiene "encabezados" que preservar ni
-  filas que limpiar; simplemente no tiene documentos hasta que algo se
-  guarda ahí. No hay flujo de "clonado" que mantener.
-- Después de cualquier escritura exitosa desde la UI, llamar a
-  `logActivity(...)` (`src/hooks/useActivityFeed.ts`) para que los demás
-  usuarios con ese mes abierto se enteren.
-- No agregar React Router ni un gestor de estado global (Redux/Zustand) sin
-  buena razón: la app tiene 3 pantallas y el estado de datos ya lo maneja
-  TanStack Query — es deliberado mantenerlo así de simple.
+**Alcance de todo lo editable: versión + marca + región.** Los ids de
+documento empiezan por `{version}_{brand}_{country}_`. Nunca filtres solo en la
+interfaz: si dos calendarios comparten documento, el bug es de modelo.
+
+**La aprobación es por calendario, no por versión.** `scope_status` en el
+documento de la versión, con clave `{brand}_{country}`.
+
+**Toda escritura deja un `ChangeRecord`** con `before`/`after` completos y con
+`summary_key` + `summary_params` (frase en lenguaje natural, localizable). De
+ahí salen el historial personal, deshacer/rehacer, la campanita y el registro
+de actividad. Si agregas una escritura nueva y no le pones `summaryKey`, la
+notificación saldrá con un texto genérico: eso cuenta como bug.
+
+**Nada destructivo sin confirmación** (`src/components/ConfirmModal.tsx`), y la
+confirmación muestra el contenido afectado.
+
+**Editar una nota conserva su identidad.** Mismo `note_id`, mismo
+`created_by`, mismo `created_at` — las reglas de Firestore lo exigen, para que
+el historial por nota no se pueda falsear.
+
+## Tiempo real: qué se escucha y qué no
+
+Lo que otra persona puede cambiar mientras miras la pantalla **tiene que ser un
+listener**, no una consulta en caché. Ya pasó una vez: el estado
+maybe/aprobado se leía una sola vez y los demás seguían viendo "aprobado".
+
+- `useVersions` — versiones y su estado de aprobación (`onSnapshot`).
+- `useChanges` — historial del mes.
+- `useActivityFeed` — campanita: mes abierto + eventos globales (`_global`).
+- `usePresence` — quién está conectado.
+- `CalendarPage` refresca las consultas de datos cuando aparece un cambio de
+  **otra** persona.
+
+**Nunca uses `where` + `orderBy` sobre campos distintos**: obliga a crear un
+índice compuesto a mano en la consola de Firebase y la pantalla se rompe en
+producción con un error que el usuario no puede arreglar. Ordena en cliente.
+La única consulta de grupo de colección con `orderBy` es `listAllChanges`, y
+está solo en la página de administradores.
+
+## Estructura
+
+```
+src/
+  components/    AppHeader, Modal, ConfirmModal, NotificationBell, Logo…
+  context/       AuthContext, ThemeContext
+  features/
+    calendar/    CalendarGrid, CalendarScopeBar, FiltersPanel, SidePanel,
+                 WeekGrid (primitiva de alineación), WeekCardsPanel
+    months/      NewMonthModal, DeleteMonthModal
+    notes/       NotesPanel, WeeklyNotes, NoteEditorModal, NoteHistoryModal
+  hooks/         useRole, useVersions, useChanges, useActivityFeed,
+                 usePresence, useUndoRedo
+  i18n/          translations.ts (es/en/pt, arranca en inglés)
+  lib/           store.ts (acceso a datos), changelog.ts, changeText.ts,
+                 roles.ts, translate.ts, dateUtils.ts, firebaseClient.ts
+  pages/         LoginPage, MonthsPage, CalendarPage, ActivityLogPage
+  styles/        tokens, base, layout, components, pages
+```
+
+Cada pantalla es una URL propia con **HashRouter** (GitHub Pages no reescribe
+rutas): `#/login`, `#/`, `#/calendar/2026-09`, `#/logs`.
+
+## Alineación semanal
+
+El calendario y los paneles de la derecha comparten el mismo ritmo vertical
+para que las semanas queden a la misma altura: encabezado `--h-head` +
+subencabezado `--h-sub` + fila de días `--h-weekhead` + N filas con `flex: 1` y
+el mismo `--week-gap`. Si algo se desalinea, es que un panel se saltó uno de
+esos bloques — **no** lo compenses con píxeles a ojo.
+
+## Convenciones
+
+- Fechas `YYYY-MM-DD`; `month_key` = `YYYY-MM` y es el id del documento del mes.
+- Todo texto visible pasa por `t()` en los tres idiomas. La app arranca en
+  **inglés** siempre.
+- Los errores se muestran en pantalla. Un fallo silencioso es peor que un
+  error feo: ya costó una sesión entera depurar un "eliminar no hace nada" que
+  eran las reglas de Firestore sin publicar.
+- Firestore rechaza `undefined`: nunca escribas un campo opcional sin
+  comprobarlo antes.
+- Estado de datos con TanStack Query; nada de Redux/Zustand.
+
+## Cómo trabajar aquí
+
+```bash
+npm install
+npm run dev
+npm run build   # tsc -b && vite build — tiene que pasar antes de subir
+npm run lint
+```
+
+Para revisar diseño sin sesión de Google: parchea temporalmente `App.tsx` con
+un harness que renderice el componente con datos falsos, toma la captura, y
+**restaura el archivo** (`git checkout --` o una copia previa) antes de
+compilar y subir.
+
+El token de GitHub del usuario **no tiene permiso `workflow`**: cualquier
+cambio a `.github/workflows/deploy.yml` hay que pedírselo por la interfaz web
+de GitHub, no intentar subirlo.
 
 ## Fase actual
 
-**Fase 1 (en progreso):** login, creación de mes, calendario de Plan
-editable, Escenarios, Notas, presencia y feed de actividad — todo con datos
-ingresados a mano. Las colecciones `real`, `results` y `creative` existen en
-el esquema pero se muestran vacías a propósito ("llega en fase 2").
+Funcionando: acceso, roles, meses con fases y resumen de aprobación,
+calendario editable por versión/marca/región, vista agregada de LATAM, notas
+generales y semanales con edición e historial por nota, resultados y creativos
+por semana, presencia, campanita de actividad y registro completo para
+administradores.
 
-**Fase 2 (no empezada):** conectar `real` a los datos reales de gasto que hoy
-vienen de `BDD PAUTA & SPOTFIRE`/Spotfire, poblar `results`/`creative`, y
-revisar si el modelo de país agregado (`LT_EXCL_MX_AR`) necesita
-desagregarse con % de atribución reales.
-
-## Setup local
-
-Ver `README.md` para la lista completa de pasos manuales (Firebase, Google
-Cloud, GitHub) — sin esos, la app corre pero muestra "Falta configuración"
-en el login.
+Pendiente de fase 2: poblar `real` con el gasto ejecutado
+(`BDD PAUTA & SPOTFIRE`) usando `source_ref` como enganche, y conectar un MCP
+de consulta sobre Firestore — por eso cada documento se guarda auto-explicativo
+(mes, versión y región legibles dentro del propio documento).

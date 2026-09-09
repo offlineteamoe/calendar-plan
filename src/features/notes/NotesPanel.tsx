@@ -5,6 +5,7 @@ import { buildNoteText, detectLocale, pickNoteText } from '../../lib/translate'
 import { WeeklyNotes } from './WeeklyNotes'
 import { NoteEditorModal } from './NoteEditorModal'
 import { NoteHistoryModal } from './NoteHistoryModal'
+import { ConfirmModal } from '../../components/ConfirmModal'
 import { useAuth } from '../../context/AuthContext'
 import { useRole } from '../../hooks/useRole'
 import { useI18n } from '../../i18n/I18nContext'
@@ -54,6 +55,10 @@ export function NotesPanel({ monthKey, scope, version, weeks }: Props) {
   const [content, setContent] = useState('')
   const [editing, setEditing] = useState<NotaRow | null>(null)
   const [historyOf, setHistoryOf] = useState<NotaRow | null>(null)
+  // Nada se borra sin confirmar, y la confirmación dice qué se va a borrar.
+  const [confirming, setConfirming] = useState<
+    { mode: 'one'; note: NotaRow } | { mode: 'week'; weekStart: string; notes: NotaRow[] } | null
+  >(null)
 
   const author = useMemo(
     () => ({ email: user?.email ?? '', initials: user?.initials ?? '' }),
@@ -147,7 +152,25 @@ export function NotesPanel({ monthKey, scope, version, weeks }: Props) {
 
   const deleteMutation = useMutation({
     mutationFn: (row: NotaRow) => deleteNota(monthKey, scope, version.letter, row, author),
-    onSuccess: invalidate,
+    onSuccess: () => {
+      setConfirming(null)
+      invalidate()
+    },
+  })
+
+  const deleteWeekMutation = useMutation({
+    mutationFn: async (rows: NotaRow[]) => {
+      // En serie a propósito: cada borrado deja su propia entrada en el
+      // historial, y así el registro queda en un orden legible.
+      for (const row of rows) {
+        if (!canDelete(row)) continue
+        await deleteNota(monthKey, scope, version.letter, row, author)
+      }
+    },
+    onSuccess: () => {
+      setConfirming(null)
+      invalidate()
+    },
   })
 
   const all = useMemo(() => notesQuery.data ?? [], [notesQuery.data])
@@ -216,7 +239,8 @@ export function NotesPanel({ monthKey, scope, version, weeks }: Props) {
           onAdd={(weekStart, k, text) => addMutation.mutate({ kind: k, content: text, weekStart })}
           onEdit={(note) => setEditing(note)}
           onHistory={(note) => setHistoryOf(note)}
-          onDelete={(note) => deleteMutation.mutate(note)}
+          onDelete={(note) => setConfirming({ mode: 'one', note })}
+          onDeleteWeek={(weekStart, weekNotes) => setConfirming({ mode: 'week', weekStart, notes: weekNotes })}
         />
       ) : (
         <>
@@ -238,8 +262,8 @@ export function NotesPanel({ monthKey, scope, version, weeks }: Props) {
                     {canDelete(n) && (
                       <button
                         className="icon-btn"
-                        title={t('notes.deleteTitle')}
-                        onClick={() => deleteMutation.mutate(n)}
+                        title={t('notes.deleteThis')}
+                        onClick={() => setConfirming({ mode: 'one', note: n })}
                       >
                         ✕
                       </button>
@@ -310,6 +334,31 @@ export function NotesPanel({ monthKey, scope, version, weeks }: Props) {
           errorMessage={updateMutation.isError ? (updateMutation.error as Error).message : undefined}
           onSubmit={(k, text) => updateMutation.mutate({ note: editing, kind: k, content: text })}
           onClose={() => setEditing(null)}
+        />
+      )}
+
+      {confirming?.mode === 'one' && (
+        <ConfirmModal
+          title={t('notes.deleteThis')}
+          message={t('notes.deleteConfirm')}
+          preview={confirming.note.content}
+          confirmLabel={t('common.delete')}
+          isPending={deleteMutation.isPending}
+          errorMessage={deleteMutation.isError ? (deleteMutation.error as Error).message : undefined}
+          onConfirm={() => deleteMutation.mutate(confirming.note)}
+          onClose={() => setConfirming(null)}
+        />
+      )}
+
+      {confirming?.mode === 'week' && (
+        <ConfirmModal
+          title={t('notes.deleteWeekAll', { count: confirming.notes.length })}
+          message={t('notes.deleteWeekConfirm', { count: confirming.notes.length, week: confirming.weekStart })}
+          confirmLabel={t('notes.deleteWeekConfirmBtn', { count: confirming.notes.length })}
+          isPending={deleteWeekMutation.isPending}
+          errorMessage={deleteWeekMutation.isError ? (deleteWeekMutation.error as Error).message : undefined}
+          onConfirm={() => deleteWeekMutation.mutate(confirming.notes)}
+          onClose={() => setConfirming(null)}
         />
       )}
 

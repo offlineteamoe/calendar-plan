@@ -3,8 +3,10 @@ import { Link } from 'react-router-dom'
 import { Logo } from './Logo'
 import { HistoryMenu } from './HistoryMenu'
 import { PresenceCell } from './PresenceCell'
+import { NotificationBell } from './NotificationBell'
 import { useI18n } from '../i18n/I18nContext'
 import { useRole } from '../hooks/useRole'
+import { useActivityFeed } from '../hooks/useActivityFeed'
 import { useTheme } from '../context/ThemeContext'
 import { useAuth } from '../context/AuthContext'
 import { LOCALES } from '../i18n/translations'
@@ -55,14 +57,17 @@ interface AppHeaderProps {
   /** Contenido a la izquierda, después del logo (título de página, volver…). */
   start?: ReactNode
   presenceUsers?: PresenceUser[]
+  /** Mes abierto, para que la campanita muestre su actividad. */
+  monthKey?: string | null
   /** Solo mis cambios; si se pasa, aparece el botón de historial. */
   myChanges?: ChangeRecord[]
   onRevert?: (change: ChangeRecord) => Promise<void>
   undoRedo?: { undo: () => void; redo: () => void; canUndo: boolean; canRedo: boolean }
 }
 
-export function AppHeader({ start, presenceUsers, myChanges, onRevert, undoRedo }: AppHeaderProps) {
-  const { isViewer } = useRole()
+export function AppHeader({ start, presenceUsers, monthKey = null, myChanges, onRevert, undoRedo }: AppHeaderProps) {
+  const { isViewer, canEdit } = useRole()
+  const activity = useActivityFeed(monthKey)
   const { locale, setLocale, t } = useI18n()
   const { preference, setPreference } = useTheme()
   const { user, status, signOut } = useAuth()
@@ -92,6 +97,7 @@ export function AppHeader({ start, presenceUsers, myChanges, onRevert, undoRedo 
       <div className="header-right" ref={rootRef}>
         {isViewer && <span className="role-badge" title={t('role.readOnly')}>{t('role.badge')}</span>}
         {presenceUsers && <PresenceCell users={presenceUsers} />}
+        <NotificationBell changes={activity} myEmail={user?.email ?? ''} />
 
         {undoRedo && (
           <>
@@ -171,9 +177,11 @@ export function AppHeader({ start, presenceUsers, myChanges, onRevert, undoRedo 
             {openMenu === 'user' && (
               <div className="menu-panel">
                 <div className="menu-email">{user.email}</div>
-                <Link to="/logs" className="menu-item" onClick={() => setOpenMenu(null)}>
-                  {t('header.viewLogs')}
-                </Link>
+                {canEdit && (
+                  <Link to="/logs" className="menu-item" onClick={() => setOpenMenu(null)}>
+                    {t('header.viewLogs')}
+                  </Link>
+                )}
                 <button
                   className="menu-item menu-item-danger"
                   onClick={() => {

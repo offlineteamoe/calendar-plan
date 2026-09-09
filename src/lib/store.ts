@@ -78,7 +78,7 @@ function stamped<T extends object>(monthKey: string, scope: Scope, versionLetter
 
 export async function listMonths(): Promise<MonthEntry[]> {
   const snapshot = await getDocs(query(collection(getDb(), COLLECTIONS.months), orderBy('month_key', 'desc')))
-  return snapshot.docs.map((d) => d.data() as MonthEntry)
+  return snapshot.docs.filter((d) => d.id !== GLOBAL_LOG_KEY).map((d) => d.data() as MonthEntry)
 }
 
 export async function getMonth(monthKey: string): Promise<MonthEntry | null> {
@@ -86,10 +86,19 @@ export async function getMonth(monthKey: string): Promise<MonthEntry | null> {
   return snap.exists() ? (snap.data() as MonthEntry) : null
 }
 
-export async function createMonth(monthKey: string, createdBy: string): Promise<MonthEntry> {
+/**
+ * Los eventos que no pertenecen a ningún mes vivo (crear o eliminar un mes)
+ * se guardan bajo esta clave, porque al eliminar un mes se borran también sus
+ * subcolecciones — incluido su propio historial. Se filtra de la lista de
+ * meses; el registro de actividad sí lo lee.
+ */
+export const GLOBAL_LOG_KEY = '_global'
+
+export async function createMonth(monthKey: string, author: ChangeAuthor): Promise<MonthEntry> {
   const db = getDb()
   const ref = doc(db, COLLECTIONS.months, monthKey)
   if ((await getDoc(ref)).exists()) throw new Error(`El mes ${monthKey} ya existe.`)
+  const createdBy = author.email
   const entry: MonthEntry = {
     month_key: monthKey,
     status: 'active',
@@ -106,6 +115,19 @@ export async function createMonth(monthKey: string, createdBy: string): Promise<
     created_at: entry.created_at,
     copied_from: null,
   } satisfies VersionEntry)
+  await recordChange({
+    monthKey: GLOBAL_LOG_KEY,
+    entity: 'version',
+    docId: monthKey,
+    action: 'create',
+    whereLabel: monthKey,
+    placeKey: 'place.months',
+    summaryKey: 'ev.month.create',
+    summaryParams: { month: monthKey },
+    before: null,
+    after: entry as unknown as Record<string, unknown>,
+    author,
+  })
   return entry
 }
 
@@ -113,7 +135,7 @@ export async function setMonthStatus(monthKey: string, status: MonthEntry['statu
   await updateDoc(doc(getDb(), COLLECTIONS.months, monthKey), { status })
 }
 
-export async function deleteMonth(monthKey: string): Promise<void> {
+export async function deleteMonth(monthKey: string, author: ChangeAuthor): Promise<void> {
   const db = getDb()
   const subCollections = [
     COLLECTIONS.versions,
@@ -136,6 +158,19 @@ export async function deleteMonth(monthKey: string): Promise<void> {
     }
   }
   await deleteDoc(doc(db, COLLECTIONS.months, monthKey))
+  await recordChange({
+    monthKey: GLOBAL_LOG_KEY,
+    entity: 'version',
+    docId: monthKey,
+    action: 'delete',
+    whereLabel: monthKey,
+    placeKey: 'place.months',
+    summaryKey: 'ev.month.delete',
+    summaryParams: { month: monthKey },
+    before: null,
+    after: null,
+    author,
+  })
 }
 
 // ---------------- Versiones de calendario ----------------
@@ -175,6 +210,9 @@ export async function setVersionStatus(
     docId: version.version_id,
     action: 'update',
     whereLabel: scopeLabel(scope, version.letter, status === 'approved' ? 'aprobado' : 'maybe'),
+    placeKey: 'place.calendar',
+    summaryKey: status === 'approved' ? 'ev.version.approved' : 'ev.version.maybe',
+    summaryParams: { version: version.letter },
     before: version as unknown as Record<string, unknown>,
     after: next as unknown as Record<string, unknown>,
     author,
@@ -249,6 +287,9 @@ export async function createVersionFrom(
     docId: letter,
     action: 'create',
     whereLabel: `${letter} (copiada de ${source.letter})`,
+    placeKey: 'place.calendar',
+    summaryKey: 'ev.version.create',
+    summaryParams: { version: letter, from: source.letter },
     before: null,
     after: version as unknown as Record<string, unknown>,
     author,
@@ -291,6 +332,9 @@ export async function savePlanCell(
     docId: id,
     action: before ? 'update' : 'create',
     whereLabel: scopeLabel(scope, versionLetter, `${day} · ${row.channel}`),
+    placeKey: 'place.calendar',
+    summaryKey: row.planned_spend > 0 ? 'ev.plan.set' : 'ev.plan.clear',
+    summaryParams: { amount: row.planned_spend, channel: row.channel, day },
     before,
     after: stampedRow as unknown as Record<string, unknown>,
     author,
@@ -321,6 +365,9 @@ export async function addEscenario(
     docId: id,
     action: 'create',
     whereLabel: scopeLabel(scope, versionLetter, `${row.week_start} · ${row.description || '—'}`),
+    placeKey: 'place.scenarios',
+    summaryKey: 'ev.scenario.create',
+    summaryParams: { week: row.week_start, amount: row.weekly_spend },
     before: null,
     after: row as unknown as Record<string, unknown>,
     author,
@@ -350,6 +397,9 @@ export async function setActiveEscenario(
     docId: scenario.scenario_id,
     action: 'update',
     whereLabel: scopeLabel(scope, versionLetter, `${scenario.week_start} · ${scenario.description || '—'}`),
+    placeKey: 'place.scenarios',
+    summaryKey: 'ev.scenario.active',
+    summaryParams: { week: scenario.week_start, description: scenario.description || '—' },
     before: { ...scenario, is_active: false } as unknown as Record<string, unknown>,
     after: { ...scenario, is_active: true } as unknown as Record<string, unknown>,
     author,
@@ -400,6 +450,12 @@ function normalizeNota(raw: Record<string, unknown>, versionId: string): NotaRow
   }
 }
 
+/** Recorte del texto para que la notificación diga de qué nota se habla. */
+function excerpt(text: string, max = 60): string {
+  const clean = text.replace(/\s+/g, ' ').trim()
+  return clean.length > max ? `${clean.slice(0, max)}…` : clean
+}
+
 /** Id del documento de una nota: el alcance va adelante, el uuid al final. */
 export function notaDocId(scope: Scope, noteId: string): string {
   return `${scopeKey(scope)}_${noteId}`
@@ -420,6 +476,9 @@ export async function addNota(
     docId: id,
     action: 'create',
     whereLabel: scopeLabel(scope, versionLetter, row.scope === 'week' ? row.week_start : 'general'),
+    placeKey: 'place.notes',
+    summaryKey: row.scope === 'week' ? 'ev.note.createWeek' : 'ev.note.create',
+    summaryParams: { kind: row.kind, week: row.week_start, excerpt: excerpt(row.content) },
     before: null,
     after: row as unknown as Record<string, unknown>,
     author,
@@ -458,6 +517,9 @@ export async function updateNota(
     docId: id,
     action: 'update',
     whereLabel: scopeLabel(scope, versionLetter, before.scope === 'week' ? before.week_start : 'general'),
+    placeKey: 'place.notes',
+    summaryKey: before.kind !== next.kind ? 'ev.note.kind' : 'ev.note.update',
+    summaryParams: { kind: next.kind, from: before.kind, excerpt: excerpt(next.content) },
     before: before as unknown as Record<string, unknown>,
     after: stampedRow as unknown as Record<string, unknown>,
     author,
@@ -480,6 +542,9 @@ export async function deleteNota(
     docId: id,
     action: 'delete',
     whereLabel: scopeLabel(scope, versionLetter, row.scope === 'week' ? row.week_start : 'general'),
+    placeKey: 'place.notes',
+    summaryKey: 'ev.note.delete',
+    summaryParams: { kind: row.kind, excerpt: excerpt(row.content) },
     before: row as unknown as Record<string, unknown>,
     after: null,
     author,
@@ -534,6 +599,16 @@ export async function saveWeekCard(
     docId: id,
     action: row.content.trim() === '' ? 'delete' : before ? 'update' : 'create',
     whereLabel: scopeLabel(scope, versionLetter, row.week_start),
+    placeKey: kind === COLLECTIONS.results ? 'place.results' : 'place.creative',
+    summaryKey:
+      row.content.trim() === ''
+        ? kind === COLLECTIONS.results
+          ? 'ev.results.clear'
+          : 'ev.creative.clear'
+        : kind === COLLECTIONS.results
+          ? 'ev.results.set'
+          : 'ev.creative.set',
+    summaryParams: { week: row.week_start, excerpt: excerpt(row.content) },
     before,
     after: row.content.trim() === '' ? null : (row as unknown as Record<string, unknown>),
     author,

@@ -1536,3 +1536,202 @@
     grid-template-columns: 1fr;
   }
 }
+
+
+/* ============ Campanita de actividad ============ */
+
+.bell-btn {
+  position: relative;
+}
+.bell-badge {
+  position: absolute;
+  top: -3px;
+  right: -3px;
+  min-width: 17px;
+  height: 17px;
+  padding: 0 4px;
+  border-radius: 100px;
+  background: #E0392E;
+  color: #fff;
+  font-size: 10px;
+  font-weight: 800;
+  line-height: 17px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  box-shadow: 0 0 0 2px var(--chrome-bg);
+}
+.bell-btn.has-unread svg {
+  animation: bell-ring 1.4s ease-in-out 1;
+  transform-origin: 50% 3px;
+}
+@keyframes bell-ring {
+  0%, 100% { transform: rotate(0); }
+  15% { transform: rotate(11deg); }
+  30% { transform: rotate(-9deg); }
+  45% { transform: rotate(6deg); }
+  60% { transform: rotate(-4deg); }
+}
+
+.activity-panel {
+  width: 380px;
+  max-width: calc(100vw - 24px);
+  padding-bottom: 0;
+}
+.activity-panel .menu-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+.activity-scroll {
+  max-height: 58vh;
+  overflow-y: auto;
+  padding-bottom: 6px;
+}
+.activity-item {
+  display: flex;
+  gap: 10px;
+  padding: 9px 12px;
+  border-top: 1px solid var(--border);
+}
+.activity-item:first-child {
+  border-top: none;
+}
+.activity-item.is-mine {
+  opacity: 0.62;
+}
+.activity-avatar {
+  width: 26px;
+  height: 26px;
+  font-size: 10px;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+.activity-body {
+  flex: 1;
+  min-width: 0;
+}
+.activity-top {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+.activity-who {
+  font-family: var(--font-display);
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--ink);
+}
+.activity-when {
+  font-size: 10.5px;
+  color: var(--ink-faint);
+  white-space: nowrap;
+}
+.activity-what {
+  margin: 2px 0 0;
+  font-size: 12.5px;
+  line-height: 1.4;
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+.activity-where {
+  margin: 3px 0 0;
+  font-size: 11px;
+  color: var(--ink-faint);
+  overflow-wrap: anywhere;
+}
+
+/* ============ Confirmaciones ============ */
+
+.confirm-message {
+  font-size: 13.5px;
+  line-height: 1.5;
+  color: var(--ink-soft);
+  margin: 0 0 12px;
+}
+.confirm-preview {
+  margin: 0 0 4px;
+  padding: 9px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--border-strong);
+  background: var(--surface-2);
+  font-size: 12.5px;
+  line-height: 1.45;
+  color: var(--ink);
+  max-height: 140px;
+  overflow-y: auto;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+/* ============ Notas por semana: acciones visibles ============ */
+
+.week-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+}
+.week-empty-plus {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 1.5px solid currentColor;
+  font-size: 12px;
+  line-height: 1;
+  font-weight: 700;
+}
+.week-note-kind {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.week-note-count {
+  font-family: var(--font-display);
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--ink-soft);
+  white-space: nowrap;
+  padding: 0 1px;
+}
+.week-note-menu-panel {
+  min-width: 210px;
+  top: calc(100% + 5px);
+}
+.week-add-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  flex-shrink: 0;
+  border: 1px solid var(--border-strong);
+  background: var(--surface-2);
+  color: var(--ink-soft);
+  border-radius: 100px;
+  padding: 2px 8px;
+  font-family: var(--font-display);
+  font-size: 9.5px;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.week-add-btn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}

@@ -115,8 +115,13 @@ export function MonthsPage() {
   const versionsQuery = useQuery({ queryKey: ['versions-by-month'], queryFn: listVersionsByMonth })
   const months = useMemo(() => monthsQuery.data ?? [], [monthsQuery.data])
 
+  const author = useMemo(
+    () => ({ email: user?.email ?? '', initials: user?.initials ?? '' }),
+    [user?.email, user?.initials],
+  )
+
   const createMutation = useMutation({
-    mutationFn: (monthKey: string) => createMonth(monthKey, user?.email ?? ''),
+    mutationFn: (monthKey: string) => createMonth(monthKey, author),
     onSuccess: (entry) => {
       void queryClient.invalidateQueries({ queryKey: ['months'] })
       void queryClient.invalidateQueries({ queryKey: ['versions-by-month'] })
@@ -126,7 +131,7 @@ export function MonthsPage() {
   })
 
   const deleteMutation = useMutation({
-    mutationFn: (monthKey: string) => deleteMonth(monthKey),
+    mutationFn: (monthKey: string) => deleteMonth(monthKey, author),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['months'] })
       void queryClient.invalidateQueries({ queryKey: ['versions-by-month'] })

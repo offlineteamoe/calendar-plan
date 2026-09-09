@@ -224,6 +224,15 @@ export interface ChangeRecord {
   action: 'create' | 'update' | 'delete'
   /** Dónde se hizo, legible: "A · OEA · México · 12 sep · TV". */
   where_label: string
+  /**
+   * Qué se hizo, en lenguaje natural. `summary_key` es una clave de i18n y
+   * `summary_params` sus valores, para que la frase se arme en el idioma de
+   * quien la lee y no quede un "update · version" que no le dice nada a nadie.
+   */
+  summary_key?: string
+  summary_params?: Record<string, string | number>
+  /** Zona de la app donde ocurrió: calendario, notas, resultados… */
+  place_key?: string
   before: Record<string, unknown> | null
   after: Record<string, unknown> | null
   reverted: boolean

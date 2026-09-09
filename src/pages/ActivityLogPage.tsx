@@ -4,19 +4,53 @@ import { useQuery } from '@tanstack/react-query'
 import { listAllChanges } from '../lib/changelog'
 import { AppHeader } from '../components/AppHeader'
 import { useI18n } from '../i18n/I18nContext'
+import { useRole } from '../hooks/useRole'
+import { describeChange } from '../lib/changeText'
 import { formatDateTime, timeAgo } from '../lib/dateUtils'
 
 /** Registro de actividad de todos los usuarios, en todos los meses. */
 export function ActivityLogPage() {
   const { t, locale } = useI18n()
+  const { canEdit, isLoading: roleLoading } = useRole()
   const navigate = useNavigate()
   const [userFilter, setUserFilter] = useState('all')
 
-  const logQuery = useQuery({ queryKey: ['all-changes'], queryFn: () => listAllChanges(250) })
+  // Todo el registro, no una muestra: el punto de esta pantalla es poder
+  // auditar sin huecos.
+  const logQuery = useQuery({
+    queryKey: ['all-changes'],
+    queryFn: () => listAllChanges(1000),
+    enabled: canEdit,
+  })
   const changes = useMemo(() => logQuery.data ?? [], [logQuery.data])
 
   const users = useMemo(() => [...new Set(changes.map((c) => c.user_email))].sort(), [changes])
   const shown = userFilter === 'all' ? changes : changes.filter((c) => c.user_email === userFilter)
+
+  // El registro completo es solo para administradores.
+  if (!canEdit && !roleLoading) {
+    return (
+      <div className="shell">
+        <AppHeader
+          start={
+            <>
+              <button className="btn-link header-back" onClick={() => navigate('/')}>
+                ← {t('header.backToMonths')}
+              </button>
+            </>
+          }
+        />
+        <div className="centered">
+          <div className="card" style={{ padding: 28, textAlign: 'center', maxWidth: 420 }}>
+            <h2>{t('logs.deniedTitle')}</h2>
+            <p className="muted" style={{ marginTop: 8 }}>
+              {t('logs.deniedBody')}
+            </p>
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="shell">
@@ -71,30 +105,35 @@ export function ActivityLogPage() {
                     <th>{t('logs.colUser')}</th>
                     <th>{t('logs.colAction')}</th>
                     <th>{t('logs.colWhere')}</th>
-                    <th>{t('logs.colMonth')}</th>
                     <th>{t('logs.colWhen')}</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {shown.map((c) => (
-                    <tr key={c.change_id}>
-                      <td>
-                        <span className="log-user">
-                          <span className="avatar">{c.user_initials || c.user_email.slice(0, 2).toUpperCase()}</span>
-                          {c.user_email.split('@')[0]}
-                        </span>
-                      </td>
-                      <td>
-                        {t(`history.action.${c.action}`)} · {t(`history.entity.${c.entity}`)}
-                        {c.reverted && <span className="pill pill-neutral" style={{ marginLeft: 8 }}>{t('logs.reverted')}</span>}
-                      </td>
-                      <td className="muted">{c.where_label}</td>
-                      <td className="tabular">{c.month_key}</td>
-                      <td className="muted small" title={formatDateTime(c.at, locale)}>
-                        {timeAgo(c.at, locale)}
-                      </td>
-                    </tr>
-                  ))}
+                  {shown.map((c) => {
+                    const { what, where, who, initials } = describeChange(c, t, locale)
+                    return (
+                      <tr key={c.change_id}>
+                        <td>
+                          <span className="log-user">
+                            <span className="avatar">{initials}</span>
+                            {who}
+                          </span>
+                        </td>
+                        <td>
+                          {what}
+                          {c.reverted && (
+                            <span className="pill pill-neutral" style={{ marginLeft: 8 }}>
+                              {t('logs.reverted')}
+                            </span>
+                          )}
+                        </td>
+                        <td className="muted">{where}</td>
+                        <td className="muted small" title={formatDateTime(c.at, locale)}>
+                          {timeAgo(c.at, locale)}
+                        </td>
+                      </tr>
+                    )
+                  })}
                 </tbody>
               </table>
             </div>

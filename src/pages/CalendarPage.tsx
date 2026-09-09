@@ -6,14 +6,14 @@ import { useI18n } from '../i18n/I18nContext'
 import { usePresence } from '../hooks/usePresence'
 import { useChanges } from '../hooks/useChanges'
 import { useUndoRedo } from '../hooks/useUndoRedo'
+import { useVersions } from '../hooks/useVersions'
 import { AppHeader } from '../components/AppHeader'
-import { ChangeToasts } from '../components/ChangeToasts'
 import { CalendarGrid } from '../features/calendar/CalendarGrid'
 import { CalendarScopeBar } from '../features/calendar/CalendarScopeBar'
 import { FiltersPanel } from '../features/calendar/FiltersPanel'
 import { SidePanel } from '../features/calendar/SidePanel'
 import { applyChangeState } from '../lib/changelog'
-import { createVersionFrom, getMonth, listVersions, setVersionStatus, type Scope } from '../lib/store'
+import { createVersionFrom, getMonth, setVersionStatus, type Scope } from '../lib/store'
 import { getMonthWeeks } from '../lib/dateUtils'
 import {
   BRANDS,
@@ -46,13 +46,9 @@ export function CalendarPage() {
   const [collapsed, setCollapsed] = useState(false)
 
   const monthQuery = useQuery({ queryKey: ['month', monthKey], queryFn: () => getMonth(monthKey), enabled: !!monthKey })
-  const versionsQuery = useQuery({
-    queryKey: ['versions', monthKey],
-    queryFn: () => listVersions(monthKey),
-    enabled: !!monthKey,
-  })
-
-  const versions = useMemo(() => versionsQuery.data ?? [], [versionsQuery.data])
+  // En vivo: si otra persona aprueba o devuelve a maybe un calendario, se ve
+  // aquí sin recargar.
+  const { versions } = useVersions(monthKey)
   const version: VersionEntry | null = useMemo(() => {
     if (versions.length === 0) return null
     return versions.find((v) => v.version_id === versionId) ?? versions[versions.length - 1]
@@ -85,6 +81,7 @@ export function CalendarPage() {
   ).filter((p) => p.uid !== user?.uid)
 
   const changes = useChanges(monthKey)
+  const lastForeignChange = changes.find((c) => c.user_email !== user?.email)?.change_id ?? null
   const myChanges = useMemo(() => changes.filter((c) => c.user_email === user?.email), [changes, user?.email])
 
   const refreshData = useCallback(() => {
@@ -109,12 +106,16 @@ export function CalendarPage() {
 
   const status = version ? calendarStatus(version, brand, country) : 'maybe'
 
+  useEffect(() => {
+    if (!lastForeignChange) return
+    refreshData()
+  }, [lastForeignChange, refreshData])
+
   const statusMutation = useMutation({
     mutationFn: () => {
       if (!version || !scope) throw new Error('sin version')
       return setVersionStatus(monthKey, version, scope, status === 'approved' ? 'maybe' : 'approved', author)
     },
-    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ['versions', monthKey] }),
   })
 
   const newVersionMutation = useMutation({
@@ -124,7 +125,6 @@ export function CalendarPage() {
     },
     onSuccess: (created) => {
       setVersionId(created.version_id)
-      void queryClient.invalidateQueries({ queryKey: ['versions', monthKey] })
       refreshData()
     },
   })
@@ -158,6 +158,7 @@ export function CalendarPage() {
           </>
         }
         presenceUsers={presence}
+        monthKey={monthKey}
         myChanges={myChanges}
         onRevert={revertTo}
         undoRedo={undoRedo}
@@ -233,8 +234,6 @@ export function CalendarPage() {
           )}
         </div>
       </div>
-
-      <ChangeToasts changes={changes} myEmail={user?.email ?? ''} />
     </div>
   )
 }

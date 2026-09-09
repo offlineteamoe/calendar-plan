@@ -34,6 +34,11 @@ interface RecordInput {
   docId: string
   action: ChangeRecord['action']
   whereLabel: string
+  /** Clave i18n de la frase natural que describe el cambio. */
+  summaryKey?: string
+  summaryParams?: Record<string, string | number>
+  /** Zona de la app: 'place.calendar', 'place.notes', … */
+  placeKey?: string
   before: Record<string, unknown> | null
   after: Record<string, unknown> | null
   author: ChangeAuthor
@@ -58,6 +63,11 @@ export async function recordChange(input: RecordInput): Promise<ChangeRecord | n
     before: input.before,
     after: input.after,
     reverted: false,
+    // Firestore rechaza `undefined`, así que estos campos solo se incluyen
+    // cuando existen (los cambios viejos no los tienen y hay que tolerarlo).
+    ...(input.summaryKey ? { summary_key: input.summaryKey } : {}),
+    ...(input.summaryParams ? { summary_params: input.summaryParams } : {}),
+    ...(input.placeKey ? { place_key: input.placeKey } : {}),
   }
   try {
     await setDoc(doc(getDb(), COLLECTIONS.months, input.monthKey, COLLECTIONS.changes, change.change_id), change)
@@ -79,13 +89,6 @@ export async function listChanges(monthKey: string, max = 100): Promise<ChangeRe
 export async function listAllChanges(max = 250): Promise<ChangeRecord[]> {
   const ref = collectionGroup(getDb(), COLLECTIONS.changes)
   const snap = await getDocs(query(ref, orderBy('at', 'desc'), fbLimit(max)))
-  return snap.docs.map((d) => d.data() as ChangeRecord)
-}
-
-/** Cambios de un usuario dentro de un mes (historial personal). */
-export async function listMyChanges(monthKey: string, email: string, max = 60): Promise<ChangeRecord[]> {
-  const ref = collection(getDb(), COLLECTIONS.months, monthKey, COLLECTIONS.changes)
-  const snap = await getDocs(query(ref, where('user_email', '==', email), orderBy('at', 'desc'), fbLimit(max)))
   return snap.docs.map((d) => d.data() as ChangeRecord)
 }
 
