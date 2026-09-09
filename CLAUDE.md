@@ -57,8 +57,11 @@ categoría `observacion`.
 documento empiezan por `{version}_{brand}_{country}_`. Nunca filtres solo en la
 interfaz: si dos calendarios comparten documento, el bug es de modelo.
 
-**La aprobación es por calendario, no por versión.** `scope_status` en el
-documento de la versión, con clave `{brand}_{country}`.
+**Las versiones también son por calendario.** Viven en
+`months/{mes}/versions/{brand}_{country}_{letra}` y llevan `brand` y `country`
+dentro. Cambiar de marca o región cambia el juego de versiones. Crear una
+versión copia solo el contenido de ese calendario. Su `status` es la
+aprobación de ese calendario, sin mapas ni excepciones.
 
 **Toda escritura deja un `ChangeRecord`** con `before`/`after` completos y con
 `summary_key` + `summary_params` (frase en lenguaje natural, localizable). De

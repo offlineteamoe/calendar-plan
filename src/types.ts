@@ -33,33 +33,31 @@ export type Channel = (typeof CHANNELS)[number]
 /** Estado de una versión de calendario. */
 export type VersionStatus = 'maybe' | 'approved'
 
+/**
+ * Una versión pertenece a UN calendario: mes + marca + región. OEA/México y
+ * OEJR/Argentina no comparten versiones, igual que no comparten plan ni notas.
+ * El documento vive en `months/{mes}/versions/{brand}_{country}_{letra}`.
+ */
 export interface VersionEntry {
   version_id: string
-  /** Letra visible: A, B, C… */
+  brand: Brand
+  country: Country
+  /** Letra visible dentro de ese calendario: A, B, C… */
   letter: string
   /** Nombre corto que le da el equipo ("Plan agresivo TV"). Opcional. */
   name?: string
   /** Para qué es esta versión y en qué se diferencia de las demás. */
   description?: string
-  /** Estado por defecto de la versión (el de un calendario sin estado propio). */
   status: VersionStatus
-  /**
-   * Estado por calendario concreto, con clave `${brand}_${country}`.
-   * Aprobar OEA/México no aprueba OEJR/Argentina: son decisiones distintas.
-   */
-  scope_status?: Record<string, VersionStatus>
   created_by: string
   created_at: string
   /** Letra de la versión de la que se copió, si aplica. */
   copied_from: string | null
 }
 
-export function calendarKey(brand: Brand, country: Country): string {
-  return `${brand}_${country}`
-}
-
-export function calendarStatus(version: VersionEntry, brand: Brand, country: Country): VersionStatus {
-  return version.scope_status?.[calendarKey(brand, country)] ?? version.status
+/** Id del documento de una versión: el calendario va delante de la letra. */
+export function versionDocId(brand: Brand, country: Country, letter: string): string {
+  return `${brand}_${country}_${letter}`
 }
 
 /** Fase del mes, deducida del calendario real — no es un estado que alguien deba mantener a mano. */

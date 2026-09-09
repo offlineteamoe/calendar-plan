@@ -1,52 +1,53 @@
-// Versiones del mes, en vivo.
+// Versiones del calendario abierto, en vivo.
 //
-// Esto NO puede ser una consulta normal en caché: el estado de aprobación
-// (maybe / aprobado) es justo el dato que una persona cambia para que las
-// demás lo vean. Con una lectura puntual, el resto del equipo seguía viendo
-// "aprobado" hasta recargar la página.
+// Una versión pertenece a UN calendario: mes + marca + región. Cambiar de
+// marca o de región cambia el juego de versiones, igual que cambia el plan y
+// las notas. Compartirlas entre calendarios era un error de modelo: la B de
+// OEA/México no tiene nada que ver con Argentina.
+//
+// Y tiene que ser un listener: el estado de aprobación es justo el dato que
+// una persona cambia para que las demás lo vean.
 
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { collection, onSnapshot } from 'firebase/firestore'
 import { getDb } from '../lib/firebaseClient'
-import { COLLECTIONS, type VersionEntry } from '../types'
+import { fallbackVersion } from '../lib/store'
+import { COLLECTIONS, type Brand, type Country, type VersionEntry } from '../types'
 
 export interface VersionsState {
   versions: VersionEntry[]
   isLoading: boolean
 }
 
-/** Versión sintética para meses creados antes de que existieran las versiones. */
-const LEGACY_A: VersionEntry = {
-  version_id: 'A',
-  letter: 'A',
-  status: 'maybe',
-  created_by: '',
-  created_at: '',
-  copied_from: null,
-}
-
-export function useVersions(monthKey: string | null): VersionsState {
-  const [state, setState] = useState<VersionsState>({ versions: [], isLoading: true })
+export function useVersions(monthKey: string | null, brand: Brand, country: Country): VersionsState {
+  const [all, setAll] = useState<{ rows: VersionEntry[]; loading: boolean }>({ rows: [], loading: true })
 
   useEffect(() => {
     if (!monthKey) {
-      setState({ versions: [], isLoading: false })
+      setAll({ rows: [], loading: false })
       return
     }
-    setState({ versions: [], isLoading: true })
+    setAll({ rows: [], loading: true })
     const ref = collection(getDb(), COLLECTIONS.months, monthKey, COLLECTIONS.versions)
     return onSnapshot(
       ref,
-      (snapshot) => {
-        const versions = snapshot.docs.map((d) => d.data() as VersionEntry).sort((a, b) => (a.letter < b.letter ? -1 : 1))
-        setState({ versions: versions.length > 0 ? versions : [LEGACY_A], isLoading: false })
-      },
+      (snapshot) => setAll({ rows: snapshot.docs.map((d) => d.data() as VersionEntry), loading: false }),
       (err) => {
         console.warn('No se pudieron escuchar las versiones del mes:', err)
-        setState({ versions: [LEGACY_A], isLoading: false })
+        setAll({ rows: [], loading: false })
       },
     )
   }, [monthKey])
 
-  return state
+  // Se escucha la colección entera y se filtra aquí: son pocos documentos y
+  // así cambiar de marca o región no abre una suscripción nueva cada vez.
+  return useMemo(() => {
+    const mine = all.rows
+      .filter((v) => v.brand === brand && v.country === country)
+      .sort((a, b) => (a.letter < b.letter ? -1 : 1))
+    return {
+      versions: mine.length > 0 ? mine : [fallbackVersion(brand, country)],
+      isLoading: all.loading,
+    }
+  }, [all, brand, country])
 }

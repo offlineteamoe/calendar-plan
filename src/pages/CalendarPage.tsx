@@ -28,7 +28,6 @@ import {
 import { getMonthWeeks } from '../lib/dateUtils'
 import {
   BRANDS,
-  calendarStatus,
   CHANNELS,
   COUNTRIES,
   COUNTRY_LABELS,
@@ -65,11 +64,17 @@ export function CalendarPage() {
   const monthQuery = useQuery({ queryKey: ['month', monthKey], queryFn: () => getMonth(monthKey), enabled: !!monthKey })
   // En vivo: si otra persona aprueba o devuelve a maybe un calendario, se ve
   // aquí sin recargar.
-  const { versions } = useVersions(monthKey)
+  const { versions } = useVersions(monthKey, brand, country)
   const version: VersionEntry | null = useMemo(() => {
     if (versions.length === 0) return null
     return versions.find((v) => v.version_id === versionId) ?? versions[versions.length - 1]
   }, [versions, versionId])
+
+  // Cada calendario tiene sus propias versiones: al cambiar de marca o región
+  // hay que soltar la que estaba abierta y caer en la última de la nueva.
+  useEffect(() => {
+    setVersionId(null)
+  }, [brand, country])
 
   // Fuera de las regiones que componen LATAM, la vista agregada no aplica.
   useEffect(() => {
@@ -124,7 +129,7 @@ export function CalendarPage() {
     [author, refreshData],
   )
 
-  const status = version ? calendarStatus(version, brand, country) : 'maybe'
+  const status = version?.status ?? 'maybe'
 
   useEffect(() => {
     if (!lastForeignChange) return

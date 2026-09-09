@@ -20,7 +20,7 @@ calendario son tres cosas juntas:
 
 | Dimensión | Valores | Dónde vive |
 |---|---|---|
-| **Versión** | `A`, `B`, `C`… | `months/{mes}/versions/{letra}` |
+| **Versión** | `A`, `B`, `C`… | `months/{mes}/versions/{brand}_{country}_{letra}` |
 | **Marca** | `OEA`, `OEJR` | campo `brand` |
 | **Región** | `LT_EXCL_MX_AR`, `MX`, `AR`, `BR` | campo `country` |
 
@@ -33,9 +33,9 @@ versión A no aparezca nunca en OEJR/Argentina ni en la versión B — no depend
 que la interfaz filtre bien, depende de que sean documentos distintos.
 
 Crear una versión nueva (B a partir de A) **copia todo** el contenido de A
-—plan, notas, escenarios, resultados y creativos, de todas las marcas y
-regiones— reescribiendo ese prefijo. La versión nueva arranca siempre en
-`maybe`.
+—plan, notas, escenarios, resultados y creativos— **de ese calendario y solo
+de ese**. A partir de ahí las dos evolucionan por separado. La versión nueva
+arranca siempre en `maybe`.
 
 ## Colecciones
 
@@ -55,15 +55,19 @@ guarda**: se deduce comparando `month_key` con la fecha de hoy (`monthPhase()`
 en `src/types.ts`). Un estado que nadie tiene que mantener a mano es un estado
 que nunca queda desactualizado.
 
-### `months/{month_key}/versions/{letra}`
+### `months/{month_key}/versions/{brand}_{country}_{letra}`
+
+**Las versiones pertenecen a un calendario, no al mes.** OEA/México tiene sus
+versiones y OEJR/Argentina las suyas: la B de una no existe en la otra. Al
+crear un mes se siembra una versión A por cada combinación de marca y región.
 
 | Campo | Tipo | Notas |
 |---|---|---|
 | `version_id`, `letter` | string | `A`, `B`, … |
 | `name` | string | nombre corto del equipo ("Plan agresivo TV"); opcional |
 | `description` | string | para qué es y en qué se diferencia; opcional |
-| `status` | `maybe` \| `approved` | estado por defecto de la versión |
-| `scope_status` | mapa | clave `{brand}_{country}` → `maybe` \| `approved` |
+| `brand`, `country` | string | a qué calendario pertenece |
+| `status` | `maybe` \| `approved` | aprobación de ESTE calendario |
 | `copied_from` | string \| null | letra de origen |
 | `created_by`, `created_at` | string | |
 
@@ -71,10 +75,8 @@ Eliminar una versión borra también todo su contenido (plan, notas, escenarios,
 resultados y creativos de todas las marcas y regiones) y exige la contraseña
 compartida del equipo. La última versión de un mes no se puede eliminar.
 
-La aprobación es **por calendario**, no por versión: aprobar OEA/México no
-aprueba OEJR/Argentina. `scope_status` guarda esa decisión por separado y
-`status` es el valor que se usa cuando un calendario todavía no tiene decisión
-propia.
+Como el documento ya es de un solo calendario, `status` es directamente su
+aprobación: aprobar OEA/México no toca OEJR/Argentina.
 
 ### `months/{month_key}/plan/{version}_{brand}_{country}_{fecha}_{canal}`
 

@@ -154,3 +154,21 @@ ahí.
 Ahora todo eso usa `useLiveDocs` (`onSnapshot`). Firestore empuja el cambio;
 no hay nada que avisar, nada que invalidar y nada que sondear. Es la razón por
 la que se eligió Firestore en primer lugar, y no se estaba aprovechando.
+
+
+## Las versiones son por calendario, no por mes
+
+Al principio las versiones colgaban del mes: un solo juego A/B/C compartido
+por las dos marcas y las cuatro regiones. Se veía mal en cuanto se usaba —
+cambiabas de OEA/México a OEJR/Argentina y seguías viendo las mismas
+versiones, aunque el contenido de abajo no tuviera nada que ver.
+
+Era incoherente con el resto del modelo: el plan, las notas, los escenarios,
+los resultados y los creativos siempre estuvieron aislados por marca y región.
+Las versiones eran la excepción, y por tanto el error.
+
+Ahora el documento de la versión lleva `brand` y `country`, su id es
+`{brand}_{country}_{letra}`, y crear una versión copia únicamente el contenido
+de ese calendario. Como cada documento ya es de un solo calendario, el estado
+de aprobación es un campo normal (`status`) en vez del mapa `scope_status` que
+hacía falta cuando una versión abarcaba ocho calendarios a la vez.

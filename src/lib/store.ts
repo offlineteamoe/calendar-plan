@@ -26,8 +26,9 @@ import { getDb } from './firebaseClient'
 import { recordChange, type ChangeAuthor } from './changelog'
 import { pruneUndefined } from './firestoreSafe'
 import {
-  calendarKey,
+  BRANDS,
   COLLECTIONS,
+  COUNTRIES,
   COUNTRY_LABELS,
   type Brand,
   type Country,
@@ -39,6 +40,7 @@ import {
   type VersionStatus,
   type WeekCardRow,
 } from '../types'
+import { versionDocId } from '../types'
 
 function subCol(db: Firestore, monthKey: string, name: string) {
   return collection(db, COLLECTIONS.months, monthKey, name)
@@ -107,15 +109,26 @@ export async function createMonth(monthKey: string, author: ChangeAuthor): Promi
     created_at: new Date().toISOString(),
   }
   await setDoc(ref, entry)
-  // Todo mes nace con su versión A en estado "maybe".
-  await setDoc(doc(db, COLLECTIONS.months, monthKey, COLLECTIONS.versions, 'A'), {
-    version_id: 'A',
-    letter: 'A',
-    status: 'maybe',
-    created_by: createdBy,
-    created_at: entry.created_at,
-    copied_from: null,
-  } satisfies VersionEntry)
+
+  // Cada calendario (marca × región) nace con su propia versión A en "maybe".
+  // Son planificaciones independientes: crear la B de OEA/México no debe
+  // aparecer en OEJR/Argentina.
+  const seed = writeBatch(db)
+  for (const brand of BRANDS) {
+    for (const country of COUNTRIES) {
+      seed.set(doc(db, COLLECTIONS.months, monthKey, COLLECTIONS.versions, versionDocId(brand, country, 'A')), {
+        version_id: 'A',
+        brand,
+        country,
+        letter: 'A',
+        status: 'maybe',
+        created_by: createdBy,
+        created_at: entry.created_at,
+        copied_from: null,
+      } satisfies VersionEntry)
+    }
+  }
+  await seed.commit()
   await recordChange({
     monthKey: GLOBAL_LOG_KEY,
     entity: 'version',
@@ -178,13 +191,18 @@ export async function deleteMonth(monthKey: string, author: ChangeAuthor): Promi
 
 const LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
 
-export async function listVersions(monthKey: string): Promise<VersionEntry[]> {
+/** Versión sintética para un calendario que aún no tiene ninguna guardada. */
+export function fallbackVersion(brand: Brand, country: Country): VersionEntry {
+  return { version_id: 'A', brand, country, letter: 'A', status: 'maybe', created_by: '', created_at: '', copied_from: null }
+}
+
+/** Versiones de UN calendario: mes + marca + región. */
+export async function listVersions(monthKey: string, brand: Brand, country: Country): Promise<VersionEntry[]> {
   const snapshot = await getDocs(subCol(getDb(), monthKey, COLLECTIONS.versions))
-  const versions = snapshot.docs.map((d) => d.data() as VersionEntry)
-  if (versions.length === 0) {
-    // Meses creados antes de que existieran las versiones: se les asume la A.
-    return [{ version_id: 'A', letter: 'A', status: 'maybe', created_by: '', created_at: '', copied_from: null }]
-  }
+  const versions = snapshot.docs
+    .map((d) => d.data() as VersionEntry)
+    .filter((v) => v.brand === brand && v.country === country)
+  if (versions.length === 0) return [fallbackVersion(brand, country)]
   return versions.sort((a, b) => (a.letter < b.letter ? -1 : 1))
 }
 
@@ -199,12 +217,8 @@ export async function setVersionStatus(
   status: VersionStatus,
   author: ChangeAuthor,
 ): Promise<void> {
-  const key = calendarKey(scope.brand, scope.country)
-  const next: VersionEntry = {
-    ...version,
-    scope_status: { ...(version.scope_status ?? {}), [key]: status },
-  }
-  await setDoc(doc(getDb(), COLLECTIONS.months, monthKey, COLLECTIONS.versions, version.version_id), next)
+  const next: VersionEntry = { ...version, status }
+  await setDoc(doc(getDb(), COLLECTIONS.months, monthKey, COLLECTIONS.versions, versionDocId(version.brand, version.country, version.letter)), next)
   await recordChange({
     monthKey,
     entity: 'version',
@@ -231,7 +245,10 @@ export async function listVersionsByMonth(): Promise<Map<string, VersionEntry[]>
     // months/{monthKey}/versions/{letter}
     const monthKey = d.ref.parent.parent?.id
     if (!monthKey) continue
-    byMonth.set(monthKey, [...(byMonth.get(monthKey) ?? []), d.data() as VersionEntry])
+    const version = d.data() as VersionEntry
+    // Versiones anteriores al alcance por calendario: no son de nadie.
+    if (!version.brand || !version.country) continue
+    byMonth.set(monthKey, [...(byMonth.get(monthKey) ?? []), version])
   }
   for (const list of byMonth.values()) list.sort((a, b) => (a.letter < b.letter ? -1 : 1))
   return byMonth
@@ -250,7 +267,10 @@ export async function updateVersionMeta(
   author: ChangeAuthor,
 ): Promise<void> {
   const next: VersionEntry = { ...version, name: meta.name.trim(), description: meta.description.trim() }
-  await setDoc(doc(getDb(), COLLECTIONS.months, monthKey, COLLECTIONS.versions, version.version_id), next)
+  await setDoc(
+    doc(getDb(), COLLECTIONS.months, monthKey, COLLECTIONS.versions, versionDocId(version.brand, version.country, version.letter)),
+    next,
+  )
   await recordChange({
     monthKey,
     entity: 'version',
@@ -277,8 +297,8 @@ export async function deleteVersion(
   author: ChangeAuthor,
 ): Promise<void> {
   const db = getDb()
-  const existing = await listVersions(monthKey)
-  if (existing.length <= 1) throw new Error('No se puede eliminar la única versión del mes.')
+  const existing = await listVersions(monthKey, version.brand, version.country)
+  if (existing.length <= 1) throw new Error('No se puede eliminar la única versión de este calendario.')
 
   const scoped = [
     COLLECTIONS.plan,
@@ -289,7 +309,14 @@ export async function deleteVersion(
     COLLECTIONS.bloqueo,
   ]
   for (const name of scoped) {
-    const snapshot = await getDocs(query(subCol(db, monthKey, name), where('version_id', '==', version.version_id)))
+    const snapshot = await getDocs(
+      query(
+        subCol(db, monthKey, name),
+        where('version_id', '==', version.version_id),
+        where('brand', '==', version.brand),
+        where('country', '==', version.country),
+      ),
+    )
     if (snapshot.empty) continue
     for (let i = 0; i < snapshot.docs.length; i += 450) {
       const batch = writeBatch(db)
@@ -297,7 +324,9 @@ export async function deleteVersion(
       await batch.commit()
     }
   }
-  await deleteDoc(doc(db, COLLECTIONS.months, monthKey, COLLECTIONS.versions, version.version_id))
+  await deleteDoc(
+    doc(db, COLLECTIONS.months, monthKey, COLLECTIONS.versions, versionDocId(version.brand, version.country, version.letter)),
+  )
 
   await recordChange({
     monthKey,
@@ -326,13 +355,15 @@ export async function createVersionFrom(
   meta: { name: string; description: string } = { name: '', description: '' },
 ): Promise<VersionEntry> {
   const db = getDb()
-  const existing = await listVersions(monthKey)
+  const existing = await listVersions(monthKey, source.brand, source.country)
   const used = new Set(existing.map((v) => v.letter))
   const letter = LETTERS.split('').find((l) => !used.has(l))
   if (!letter) throw new Error('Se alcanzó el máximo de versiones (Z).')
 
   const version: VersionEntry = {
     version_id: letter,
+    brand: source.brand,
+    country: source.country,
     letter,
     name: meta.name.trim(),
     description: meta.description.trim(),
@@ -341,12 +372,19 @@ export async function createVersionFrom(
     created_at: new Date().toISOString(),
     copied_from: source.letter,
   }
-  await setDoc(doc(db, COLLECTIONS.months, monthKey, COLLECTIONS.versions, letter), version)
+  await setDoc(doc(db, COLLECTIONS.months, monthKey, COLLECTIONS.versions, versionDocId(source.brand, source.country, letter)), version)
 
-  // Copiar el contenido de la versión origen a la nueva.
+  // Copiar el contenido de la versión origen — solo el de ESTE calendario.
   const copyable = [COLLECTIONS.plan, COLLECTIONS.nota, COLLECTIONS.escenario, COLLECTIONS.results, COLLECTIONS.creative]
   for (const name of copyable) {
-    const snapshot = await getDocs(query(subCol(db, monthKey, name), where('version_id', '==', source.version_id)))
+    const snapshot = await getDocs(
+      query(
+        subCol(db, monthKey, name),
+        where('version_id', '==', source.version_id),
+        where('brand', '==', source.brand),
+        where('country', '==', source.country),
+      ),
+    )
     if (snapshot.empty) continue
     for (let i = 0; i < snapshot.docs.length; i += 400) {
       const batch = writeBatch(db)

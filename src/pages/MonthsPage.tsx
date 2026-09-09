@@ -10,9 +10,6 @@ import { AnimatedBackground } from '../components/AnimatedBackground'
 import { NewMonthModal } from '../features/months/NewMonthModal'
 import { DeleteMonthModal } from '../features/months/DeleteMonthModal'
 import {
-  BRANDS,
-  calendarStatus,
-  COUNTRIES,
   COUNTRY_LABELS,
   monthPhase,
   type MonthEntry,
@@ -35,26 +32,19 @@ interface Approval {
 }
 
 /**
- * Resumen de aprobación del mes: cuántos calendarios (versión × marca ×
- * región) siguen en "maybe" y cuál es el primero, para saber de un vistazo
- * que ahí todavía falta algo sin tener que entrar al mes.
+ * Resumen de aprobación del mes. Cada versión ya pertenece a un calendario
+ * concreto (marca + región), así que basta con contarlas: cuántas siguen en
+ * "maybe" y cuál es la primera, para saber de un vistazo que ahí falta algo
+ * sin tener que entrar al mes.
  */
 function approvalOf(versions: VersionEntry[]): Approval {
-  let total = 0
-  let pending = 0
-  let firstPending: string | null = null
-  for (const version of versions) {
-    for (const brand of BRANDS) {
-      for (const country of COUNTRIES) {
-        total += 1
-        if (calendarStatus(version, brand, country) !== 'approved') {
-          pending += 1
-          firstPending ??= `${version.letter} · ${brand} · ${COUNTRY_LABELS[country]}`
-        }
-      }
-    }
+  const pendingOnes = versions.filter((v) => v.status !== 'approved')
+  const first = pendingOnes[0]
+  return {
+    total: versions.length,
+    pending: pendingOnes.length,
+    firstPending: first ? `${first.letter} · ${first.brand} · ${COUNTRY_LABELS[first.country]}` : null,
   }
-  return { total, pending, firstPending }
 }
 
 function MonthMenu({ onDelete }: { onDelete: () => void }) {
