@@ -246,13 +246,14 @@ export function NotesPanel({ monthKey, scope, version, weeks }: Props) {
         <WeeklyNotes
           weeks={weeks}
           notes={weekly}
-          isSaving={addMutation.isPending}
+          isSaving={addMutation.isPending || updateMutation.isPending}
           kinds={creatableKinds}
           canEditNote={canEditNote}
           canDelete={canDelete}
           canSeeHistory={canSeeHistory}
+          kindsFor={kindsFor}
           onAdd={(weekStart, k, text) => addMutation.mutate({ kind: k, content: text, weekStart })}
-          onEdit={(note) => setEditing(note)}
+          onUpdate={(note, k, text) => updateMutation.mutate({ note, kind: k, content: text })}
           onHistory={(note) => setHistoryOf(note)}
           onDelete={(note) => setConfirming({ mode: 'one', note })}
           onDeleteWeek={(weekStart, weekNotes) => setConfirming({ mode: 'week', weekStart, notes: weekNotes })}
