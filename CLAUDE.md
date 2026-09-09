@@ -149,6 +149,14 @@ El token de GitHub del usuario **no tiene permiso `workflow`**: cualquier
 cambio a `.github/workflows/deploy.yml` hay que pedírselo por la interfaz web
 de GitHub, no intentar subirlo.
 
+Si en Windows aparece el selector de cuenta de GitHub en cada `push`, es que el
+Credential Manager tiene varias cuentas guardadas y el repositorio no tiene
+ninguna asignada. Se fija una vez, por repositorio:
+
+```bash
+git config --local credential.https://github.com.username offlineteamoe
+```
+
 ## Fase actual
 
 Funcionando: acceso, roles, meses con fases y resumen de aprobación,
