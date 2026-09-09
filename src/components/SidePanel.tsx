@@ -5,15 +5,16 @@ import { NotesTab } from './NotesTab'
 import { ScenarioEditor } from './ScenarioEditor'
 import type { Brand, Country } from '../types'
 import { COUNTRY_LABELS } from '../types'
+import { useI18n } from '../i18n/I18nContext'
 
 type TabKey = 'resumen' | 'spend' | 'notes' | 'results' | 'creative'
 
-const TABS: { key: TabKey; label: string }[] = [
-  { key: 'resumen', label: 'Resumen' },
-  { key: 'spend', label: 'Spend' },
-  { key: 'notes', label: 'Notes' },
-  { key: 'results', label: 'Results' },
-  { key: 'creative', label: 'Creative' },
+const TAB_KEYS: { key: TabKey; labelKey: string }[] = [
+  { key: 'resumen', labelKey: 'tabs.summary' },
+  { key: 'spend', labelKey: 'tabs.spend' },
+  { key: 'notes', labelKey: 'tabs.notes' },
+  { key: 'results', labelKey: 'tabs.results' },
+  { key: 'creative', labelKey: 'tabs.creative' },
 ]
 
 interface Props {
@@ -22,11 +23,8 @@ interface Props {
   country: Country
 }
 
-function EmptyPhase2({ label }: { label: string }) {
-  return <p className="muted">{label} todavía no tiene datos — llega en la fase 2, cuando se conecte el gasto real.</p>
-}
-
 export function SidePanel({ monthKey, brand, country }: Props) {
+  const { t } = useI18n()
   const [tab, setTab] = useState<TabKey>('resumen')
   const planQuery = useQuery({ queryKey: ['plan', monthKey], queryFn: () => getPlanRows(monthKey) })
 
@@ -37,9 +35,9 @@ export function SidePanel({ monthKey, brand, country }: Props) {
   return (
     <aside className="side-panel">
       <nav className="side-panel-tabs">
-        {TABS.map((t) => (
-          <button key={t.key} className={t.key === tab ? 'tab-active' : ''} onClick={() => setTab(t.key)}>
-            {t.label}
+        {TAB_KEYS.map((tb) => (
+          <button key={tb.key} className={tb.key === tab ? 'tab-active' : ''} onClick={() => setTab(tb.key)}>
+            {t(tb.labelKey)}
           </button>
         ))}
       </nav>
@@ -47,20 +45,20 @@ export function SidePanel({ monthKey, brand, country }: Props) {
       <div className="side-panel-body">
         {tab === 'resumen' && (
           <div className="tab-content">
-            <h3>Resumen</h3>
+            <h3>{t('tabs.summary')}</h3>
             <p className="muted">
               {brand} · {COUNTRY_LABELS[country]}
             </p>
             <div className="summary-figure">
               <span className="summary-value">${totalForSelection.toLocaleString()}</span>
-              <span className="muted small">planificado este mes (todos los canales)</span>
+              <span className="muted small">{t('summary.plannedThisMonth')}</span>
             </div>
             <ScenarioEditor monthKey={monthKey} brand={brand} />
           </div>
         )}
         {tab === 'spend' && (
           <div className="tab-content">
-            <h3>Spend por canal</h3>
+            <h3>{t('tabs.spend')}</h3>
             {['TV', 'Digital', 'Radio', 'Otro'].map((ch) => {
               const total = (planQuery.data ?? [])
                 .filter((r) => r.brand === brand && r.country === country && r.channel === ch)
@@ -77,14 +75,14 @@ export function SidePanel({ monthKey, brand, country }: Props) {
         {tab === 'notes' && <NotesTab monthKey={monthKey} />}
         {tab === 'results' && (
           <div className="tab-content">
-            <h3>Results</h3>
-            <EmptyPhase2 label="Results" />
+            <h3>{t('tabs.results')}</h3>
+            <p className="muted">{t('phase2.empty', { label: t('tabs.results') })}</p>
           </div>
         )}
         {tab === 'creative' && (
           <div className="tab-content">
-            <h3>Creative</h3>
-            <EmptyPhase2 label="Creative" />
+            <h3>{t('tabs.creative')}</h3>
+            <p className="muted">{t('phase2.empty', { label: t('tabs.creative') })}</p>
           </div>
         )}
       </div>

@@ -22,8 +22,7 @@ service cloud.firestore {
     // no hay permisos por rol en esta fase.
     match /months/{monthKey} {
       allow read: if isOeUser();
-      allow create, update: if isOeUser();
-      allow delete: if false;
+      allow create, update, delete: if isOeUser();
 
       match /{collection}/{docId} {
         allow read, write: if isOeUser();

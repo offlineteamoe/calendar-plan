@@ -1,23 +1,22 @@
-import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { getPlanRows, upsertPlanRow } from '../lib/store'
 import { logActivity } from '../hooks/useActivityFeed'
 import { getMonthWeeks, isInMonth, isoWeekNumber, weekdayLabel } from '../lib/dateUtils'
 import type { Brand, Country, PlanRow } from '../types'
 import { useAuth } from '../context/AuthContext'
-
-const CHANNELS = ['TV', 'Digital', 'Radio', 'Otro']
+import { useI18n } from '../i18n/I18nContext'
 
 interface Props {
   monthKey: string
   brand: Brand
   country: Country
+  channel: string
 }
 
-export function CalendarGrid({ monthKey, brand, country }: Props) {
+export function CalendarGrid({ monthKey, brand, country, channel }: Props) {
   const { user } = useAuth()
+  const { t } = useI18n()
   const queryClient = useQueryClient()
-  const [channel, setChannel] = useState(CHANNELS[0])
 
   const planQuery = useQuery({ queryKey: ['plan', monthKey], queryFn: () => getPlanRows(monthKey) })
 
@@ -57,17 +56,10 @@ export function CalendarGrid({ monthKey, brand, country }: Props) {
   return (
     <div className="calendar-grid">
       <div className="calendar-grid-toolbar">
-        <label>
-          Canal
-          <select value={channel} onChange={(e) => setChannel(e.target.value)}>
-            {CHANNELS.map((c) => (
-              <option key={c} value={c}>
-                {c}
-              </option>
-            ))}
-          </select>
-        </label>
-        {planQuery.isFetching && <span className="muted small">actualizando…</span>}
+        <span className="calendar-grid-title">
+          {brand} · {channel}
+        </span>
+        {planQuery.isFetching && <span className="muted small">{t('calendar.updating')}</span>}
       </div>
 
       <div className="calendar-weekday-header">

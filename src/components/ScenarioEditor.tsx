@@ -4,6 +4,7 @@ import { addEscenario, getEscenarios, setActiveEscenario } from '../lib/store'
 import { logActivity } from '../hooks/useActivityFeed'
 import type { Brand, EscenarioRow } from '../types'
 import { useAuth } from '../context/AuthContext'
+import { useI18n } from '../i18n/I18nContext'
 
 interface Props {
   monthKey: string
@@ -19,6 +20,7 @@ interface Props {
  */
 export function ScenarioEditor({ monthKey, brand }: Props) {
   const { user } = useAuth()
+  const { t } = useI18n()
   const queryClient = useQueryClient()
   const [weekStart, setWeekStart] = useState('')
   const [description, setDescription] = useState('')
@@ -64,27 +66,27 @@ export function ScenarioEditor({ monthKey, brand }: Props) {
 
   return (
     <div className="tab-content">
-      <h3>Escenarios semanales — {brand}</h3>
+      <h3>{t('scenario.title', { brand })}</h3>
 
       {[...byWeek.entries()].map(([week, list]) => (
         <div key={week} className="scenario-week">
-          <div className="scenario-week-label">Semana del {week}</div>
+          <div className="scenario-week-label">{t('scenario.week', { date: week })}</div>
           {list.map((s) => (
             <div key={s.scenario_id} className={`scenario-row ${s.is_active ? 'scenario-active' : ''}`}>
-              <span>{s.description || '(sin descripción)'}</span>
+              <span>{s.description || t('scenario.noDescription')}</span>
               <span className="scenario-amount">${s.weekly_spend.toLocaleString()}</span>
               {s.is_active ? (
-                <span className="status-pill status-active">activo</span>
+                <span className="status-pill status-active">{t('scenario.active')}</span>
               ) : (
                 <button className="btn-link" onClick={() => activateMutation.mutate(s)}>
-                  marcar activo
+                  {t('scenario.markActive')}
                 </button>
               )}
             </div>
           ))}
         </div>
       ))}
-      {scenarios.length === 0 && <p className="muted">Todavía no hay escenarios para {brand} este mes.</p>}
+      {scenarios.length === 0 && <p className="muted">{t('scenario.empty', { brand })}</p>}
 
       <form
         className="inline-form"
@@ -93,24 +95,11 @@ export function ScenarioEditor({ monthKey, brand }: Props) {
           addMutation.mutate()
         }}
       >
-        <input type="date" value={weekStart} onChange={(e) => setWeekStart(e.target.value)} required title="Lunes de la semana" />
-        <input
-          type="text"
-          placeholder="Descripción (ej. High CAM Off 1 SpotxH)"
-          value={description}
-          onChange={(e) => setDescription(e.target.value)}
-          required
-        />
-        <input
-          type="number"
-          placeholder="$/semana"
-          value={weeklySpend}
-          onChange={(e) => setWeeklySpend(e.target.value)}
-          required
-          min={0}
-        />
+        <input type="date" value={weekStart} onChange={(e) => setWeekStart(e.target.value)} required />
+        <input type="text" placeholder={t('scenario.descriptionPh')} value={description} onChange={(e) => setDescription(e.target.value)} required />
+        <input type="number" placeholder={t('scenario.weeklyPh')} value={weeklySpend} onChange={(e) => setWeeklySpend(e.target.value)} required min={0} />
         <button className="btn-secondary" type="submit" disabled={addMutation.isPending}>
-          {addMutation.isPending ? 'Guardando…' : 'Agregar escenario'}
+          {addMutation.isPending ? t('scenario.adding') : t('scenario.add')}
         </button>
       </form>
     </div>

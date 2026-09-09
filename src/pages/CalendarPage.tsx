@@ -6,17 +6,27 @@ import { PresenceBar } from '../components/PresenceBar'
 import { ActivityToast } from '../components/ActivityToast'
 import { CalendarGrid } from '../components/CalendarGrid'
 import { SidePanel } from '../components/SidePanel'
-import { BRANDS, COUNTRIES, COUNTRY_LABELS, type Brand, type Country, type MonthEntry } from '../types'
+import { FiltersPanel } from '../components/FiltersPanel'
+import { AppHeader } from '../components/AppHeader'
+import { BRANDS, COUNTRIES, type Brand, type Country, type MonthEntry } from '../types'
+import { useI18n } from '../i18n/I18nContext'
+
+const CHANNELS = ['TV', 'Digital', 'Radio', 'Otro']
 
 interface Props {
   month: MonthEntry
   onBack: () => void
 }
 
+type MobileTab = 'calendar' | 'detail'
+
 export function CalendarPage({ month, onBack }: Props) {
   const { user } = useAuth()
+  const { t } = useI18n()
   const [brand, setBrand] = useState<Brand>(BRANDS[0])
   const [country, setCountry] = useState<Country>(COUNTRIES[0])
+  const [channel, setChannel] = useState(CHANNELS[0])
+  const [mobileTab, setMobileTab] = useState<MobileTab>('calendar')
 
   const currentView = `${brand}-${country}`
   const presenceUsers = usePresence(
@@ -27,45 +37,45 @@ export function CalendarPage({ month, onBack }: Props) {
   const activityEvents = useActivityFeed(month.month_key)
 
   return (
-    <div className="calendar-page">
-      <header className="page-header">
-        <div>
-          <button className="btn-link" onClick={onBack}>
-            ← Meses
-          </button>
-          <h1>{month.month_key}</h1>
-        </div>
-        <PresenceBar users={presenceUsers} />
-      </header>
+    <div className="app-shell">
+      <AppHeader
+        start={
+          <div className="calendar-header-start">
+            <button className="btn-link" onClick={onBack}>
+              ← {t('calendar.back')}
+            </button>
+            <h1 className="page-title">{month.month_key}</h1>
+          </div>
+        }
+        extra={<PresenceBar users={presenceUsers} />}
+      />
 
-      <div className="calendar-page-toolbar">
-        <div className="selector-group">
-          <label>
-            Marca
-            <select value={brand} onChange={(e) => setBrand(e.target.value as Brand)}>
-              {BRANDS.map((b) => (
-                <option key={b} value={b}>
-                  {b}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label>
-            País / región
-            <select value={country} onChange={(e) => setCountry(e.target.value as Country)}>
-              {COUNTRIES.map((c) => (
-                <option key={c} value={c}>
-                  {COUNTRY_LABELS[c]}
-                </option>
-              ))}
-            </select>
-          </label>
-        </div>
+      <div className="mobile-tabs">
+        <button className={mobileTab === 'calendar' ? 'mobile-tab-active' : ''} onClick={() => setMobileTab('calendar')}>
+          {t('mobile.calendarTab')}
+        </button>
+        <button className={mobileTab === 'detail' ? 'mobile-tab-active' : ''} onClick={() => setMobileTab('detail')}>
+          {t('mobile.detailTab')}
+        </button>
       </div>
 
-      <div className="calendar-page-body">
-        <CalendarGrid monthKey={month.month_key} brand={brand} country={country} />
-        <SidePanel monthKey={month.month_key} brand={brand} country={country} />
+      <div className="calendar-layout">
+        <FiltersPanel
+          brand={brand}
+          country={country}
+          channel={channel}
+          onBrandChange={setBrand}
+          onCountryChange={setCountry}
+          onChannelChange={setChannel}
+        />
+
+        <div className={`cal-slot ${mobileTab === 'calendar' ? '' : 'mobile-hidden'}`}>
+          <CalendarGrid monthKey={month.month_key} brand={brand} country={country} channel={channel} />
+        </div>
+
+        <div className={`detail-slot ${mobileTab === 'detail' ? '' : 'mobile-hidden'}`}>
+          <SidePanel monthKey={month.month_key} brand={brand} country={country} />
+        </div>
       </div>
 
       <ActivityToast events={activityEvents} myEmail={user?.email ?? ''} />

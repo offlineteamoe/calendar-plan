@@ -11,8 +11,10 @@ export default function App() {
 
   if (status === 'loading') {
     return (
-      <div className="centered-page">
-        <p className="muted">Cargando…</p>
+      <div className="app-shell">
+        <div className="centered-page">
+          <p className="muted">Cargando…</p>
+        </div>
       </div>
     )
   }

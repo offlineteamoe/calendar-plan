@@ -4,13 +4,9 @@ import { addNota, getNotas } from '../lib/store'
 import { logActivity } from '../hooks/useActivityFeed'
 import type { NotaCategory, NotaRow } from '../types'
 import { useAuth } from '../context/AuthContext'
+import { useI18n } from '../i18n/I18nContext'
 
-const CATEGORY_LABELS: Record<NotaCategory, string> = {
-  promo: 'Promoción',
-  channel_toggle: 'Canal on/off',
-  rationale: 'Razón / contexto',
-  general: 'General',
-}
+const CATEGORIES: NotaCategory[] = ['general', 'promo', 'channel_toggle', 'rationale']
 
 interface Props {
   monthKey: string
@@ -18,6 +14,7 @@ interface Props {
 
 export function NotesTab({ monthKey }: Props) {
   const { user } = useAuth()
+  const { t } = useI18n()
   const queryClient = useQueryClient()
   const [weekStart, setWeekStart] = useState('')
   const [category, setCategory] = useState<NotaCategory>('general')
@@ -54,20 +51,20 @@ export function NotesTab({ monthKey }: Props) {
 
   return (
     <div className="tab-content">
-      <h3>Notas</h3>
-      {notasQuery.isLoading && <p className="muted">Cargando…</p>}
+      <h3>{t('notes.title')}</h3>
+      {notasQuery.isLoading && <p className="muted">{t('notes.loading')}</p>}
       <ul className="notes-list">
         {notas.map((n) => (
           <li key={n.note_id} className="note-card">
             <div className="note-meta">
-              <span className={`category-pill category-${n.category}`}>{CATEGORY_LABELS[n.category] ?? n.category}</span>
-              <span className="muted">semana {n.week_start}</span>
+              <span className={`category-pill category-${n.category}`}>{t(`notes.category.${n.category}`)}</span>
+              <span className="muted">{t('notes.week', { date: n.week_start })}</span>
             </div>
             <p>{n.content}</p>
             <span className="muted small">{n.created_by}</span>
           </li>
         ))}
-        {notas.length === 0 && !notasQuery.isLoading && <p className="muted">Todavía no hay notas este mes.</p>}
+        {notas.length === 0 && !notasQuery.isLoading && <p className="muted">{t('notes.empty')}</p>}
       </ul>
 
       <form
@@ -78,24 +75,18 @@ export function NotesTab({ monthKey }: Props) {
         }}
       >
         <div className="form-row">
-          <input type="date" value={weekStart} onChange={(e) => setWeekStart(e.target.value)} required title="Semana" />
+          <input type="date" value={weekStart} onChange={(e) => setWeekStart(e.target.value)} required />
           <select value={category} onChange={(e) => setCategory(e.target.value as NotaCategory)}>
-            {Object.entries(CATEGORY_LABELS).map(([value, label]) => (
-              <option key={value} value={value}>
-                {label}
+            {CATEGORIES.map((c) => (
+              <option key={c} value={c}>
+                {t(`notes.category.${c}`)}
               </option>
             ))}
           </select>
         </div>
-        <textarea
-          placeholder="Ej. 70% Off Sep 21-25 (TV+DG)"
-          value={content}
-          onChange={(e) => setContent(e.target.value)}
-          required
-          rows={2}
-        />
+        <textarea placeholder={t('notes.contentPh')} value={content} onChange={(e) => setContent(e.target.value)} required rows={2} />
         <button className="btn-secondary" type="submit" disabled={addMutation.isPending}>
-          {addMutation.isPending ? 'Guardando…' : 'Agregar nota'}
+          {addMutation.isPending ? t('notes.adding') : t('notes.add')}
         </button>
       </form>
     </div>

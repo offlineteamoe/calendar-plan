@@ -7,10 +7,9 @@ function timeAgo(ms: number): string {
   return `hace ${Math.round(seconds / 60)}m`
 }
 
+/** Avatares de quién más tiene este mes abierto ahora — vacío si nadie más. */
 export function PresenceBar({ users }: { users: PresenceUser[] }) {
-  if (users.length === 0) {
-    return <div className="presence-bar muted">Nadie más está viendo este mes ahora mismo.</div>
-  }
+  if (users.length === 0) return null
   return (
     <div className="presence-bar">
       {users.map((u) => (

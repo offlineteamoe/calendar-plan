@@ -9,6 +9,7 @@
 
 import {
   collection,
+  deleteDoc,
   doc,
   getDoc,
   getDocs,
@@ -17,6 +18,7 @@ import {
   setDoc,
   updateDoc,
   where,
+  writeBatch,
   type Firestore,
 } from 'firebase/firestore'
 import { getDb } from './firebaseClient'
@@ -52,6 +54,32 @@ export async function createMonth(monthKey: string, createdBy: string): Promise<
   }
   await setDoc(ref, entry)
   return entry
+}
+
+export async function setMonthStatus(monthKey: string, status: MonthEntry['status']): Promise<void> {
+  await updateDoc(doc(getDb(), COLLECTIONS.months, monthKey), { status })
+}
+
+/** Borra un mes completo: sus subcolecciones de datos y el documento del mes. */
+export async function deleteMonth(monthKey: string): Promise<void> {
+  const db = getDb()
+  const dataCollections = [
+    COLLECTIONS.plan,
+    COLLECTIONS.escenario,
+    COLLECTIONS.nota,
+    COLLECTIONS.bloqueo,
+    COLLECTIONS.real,
+    COLLECTIONS.results,
+    COLLECTIONS.creative,
+  ]
+  for (const name of dataCollections) {
+    const snapshot = await getDocs(subCol(db, monthKey, name))
+    if (snapshot.empty) continue
+    const batch = writeBatch(db)
+    snapshot.docs.forEach((d) => batch.delete(d.ref))
+    await batch.commit()
+  }
+  await deleteDoc(doc(db, COLLECTIONS.months, monthKey))
 }
 
 // ---------- Plan ----------
