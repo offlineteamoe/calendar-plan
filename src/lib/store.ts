@@ -356,9 +356,29 @@ export async function createVersionFrom(
 ): Promise<VersionEntry> {
   const db = getDb()
   const existing = await listVersions(monthKey, source.brand, source.country)
-  const used = new Set(existing.map((v) => v.letter))
-  const letter = LETTERS.split('').find((l) => !used.has(l))
+  // La letra avanza siempre hacia adelante; nunca rellena un hueco. Si se
+  // borró la B, la siguiente es la D, no la B otra vez: las letras identifican
+  // una versión, no son casillas reutilizables. Reutilizarlas sobrescribiría
+  // el contenido de la versión borrada, que comparte el prefijo del id.
+  const highest = existing.reduce((max, v) => (v.letter > max ? v.letter : max), 'A')
+  const letter = LETTERS[LETTERS.indexOf(highest) + 1]
   if (!letter) throw new Error('Se alcanzó el máximo de versiones (Z).')
+
+  // Si la versión de origen todavía no existe en la base (es la A que la
+  // interfaz muestra por defecto en un calendario recién estrenado), hay que
+  // guardarla ANTES de crear la siguiente. Si no, al aparecer la B la A
+  // dejaría de listarse —porque solo existía en pantalla— y con ella se
+  // perdería el acceso a todo lo que ya se hubiera escrito debajo.
+  const sourceRef = doc(
+    db,
+    COLLECTIONS.months,
+    monthKey,
+    COLLECTIONS.versions,
+    versionDocId(source.brand, source.country, source.letter),
+  )
+  if (!(await getDoc(sourceRef)).exists()) {
+    await setDoc(sourceRef, source)
+  }
 
   const version: VersionEntry = {
     version_id: letter,

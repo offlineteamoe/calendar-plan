@@ -262,3 +262,19 @@ Tres lecciones que costaron más de una vez:
 3. **Lo que no verifica una máquina, se olvida.** El parche de acceso llegó a
    producción porque la restauración dependía de que alguien se acordara. Ahora
    lo comprueba el build.
+
+### Al crear la versión B desaparecía la A
+
+Un calendario sin versiones guardadas muestra una **A sintética**, que solo
+existe en pantalla. Al crear la B —la primera versión real— la lista pasaba a
+tener contenido y la sintética dejaba de añadirse: la A desaparecía del menú y,
+con ella, el acceso a todo lo que ya se hubiera escrito debajo. El contenido
+seguía en la base, simplemente sin ninguna versión desde la que llegar a él.
+
+**Solución:** crear una versión guarda primero la de origen si aún no existe.
+
+Al revisarlo apareció un segundo riesgo, todavía no disparado: la letra nueva
+se elegía tomando **el primer hueco libre**, así que en un calendario que
+hubiera quedado solo con B, la siguiente versión se habría llamado A y habría
+sobrescrito el contenido huérfano. Ahora las letras avanzan siempre hacia
+adelante.

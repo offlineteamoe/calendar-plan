@@ -32,6 +32,14 @@ El **id de cada documento editable empieza por ese alcance**:
 versión A no aparezca nunca en OEJR/Argentina ni en la versión B — no depende de
 que la interfaz filtre bien, depende de que sean documentos distintos.
 
+Las letras **avanzan siempre**: nunca se rellena un hueco. Si se borra la B, la
+siguiente versión es la D. Reutilizar una letra sobrescribiría el contenido de
+la versión borrada, porque comparte el prefijo del id.
+
+La versión A que ve un calendario recién estrenado **puede no existir todavía**
+en la base: se escribe la primera vez que alguien la aprueba, la renombra o
+crea una versión a partir de ella.
+
 Crear una versión nueva (B a partir de A) **copia todo** el contenido de A
 —plan, notas, escenarios, resultados y creativos— **de ese calendario y solo
 de ese**. A partir de ahí las dos evolucionan por separado. La versión nueva

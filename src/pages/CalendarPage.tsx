@@ -171,8 +171,12 @@ export function CalendarPage() {
     },
   })
 
-  const nextLetter =
-    'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('').find((l) => !versions.some((v) => v.letter === l)) ?? '?'
+  // Solo para mostrar la letra en el modal antes de crear. Tiene que seguir el
+  // mismo criterio que `createVersionFrom`: la siguiente a la más alta, nunca
+  // el primer hueco libre.
+  const LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
+  const highestLetter = versions.reduce((max, v) => (v.letter > max ? v.letter : max), 'A')
+  const nextLetter = LETTERS[LETTERS.indexOf(highestLetter) + 1] ?? '?'
 
   if (monthQuery.isSuccess && !monthQuery.data) {
     return (
