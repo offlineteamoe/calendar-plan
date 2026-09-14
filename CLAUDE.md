@@ -10,20 +10,26 @@ resolviendo mal para esta arquitectura.
 
 - Repo: `github.com/offlineteamoe/calendar-plan` (rama `main`)
 - Publicado: `https://offlineteamoe.github.io/calendar-plan/`
-- Proyecto Firebase: `oe-search-alert` (se muestra como "Open English Auth
-  Services"). Es el único que se usa; `calendar-plan-c36b5` se creó por error
-  al principio, está vacío, y **no** hay que apuntar nada ahí. La fuente de
-  verdad es `VITE_FIREBASE_PROJECT_ID` en `.env.local` y en las Variables del
-  repositorio, nunca lo que diga un documento.
+- Proyecto Firebase: `offline-planning`, propiedad de `am@openenglish.com` y
+  exclusivo de esta herramienta. La configuración vive en `src/config.ts`
+  (`FIREBASE_DEFAULTS`); una variable de entorno la sobreescribe. La fuente de
+  verdad es siempre el código o la variable, nunca lo que diga un documento —
+  ya hubo un tutorial entero apuntando al proyecto equivocado.
 - Carpeta de trabajo: `C:\Users\william.fonseca\Projects\media-plan-calendar`
   (**no** en la unidad G: — `npm install` falla ahí por bloqueo de archivos de
   Google Drive)
 
-Documentos hermanos, léelos antes de tocar datos o pedirle pasos al usuario:
-- `docs/DATA-MODEL.md` — el esquema completo de Firestore, campo por campo.
+Documentación completa en `docs/` — empieza por `docs/README.md`, que es el
+índice. Antes de tocar datos o de pedirle pasos al usuario, lee al menos:
+- `docs/DATA-MODEL.md` — el esquema de Firestore, campo por campo.
+- `docs/SEGURIDAD-Y-ROLES.md` — quién puede hacer qué, y dónde se impone.
 - `docs/PASOS-MANUALES.md` — lo que solo puede hacer el usuario en las
   consolas de Google/GitHub, con links exactos.
 - `docs/DECISIONES.md` — por qué la app es como es (y qué se descartó).
+- `docs/BITACORA.md` — errores ya pagados; no vuelvas a recorrerlos.
+
+**Si cambias el comportamiento, actualiza el documento correspondiente en el
+mismo commit.**
 
 ## Quién es el usuario
 

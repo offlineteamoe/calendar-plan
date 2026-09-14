@@ -64,12 +64,15 @@ queda desactualizado.
 
 ## Aprobación por calendario, no por versión
 
-Una versión cubre las dos marcas y las cuatro regiones. Aprobar OEA/México no
-significa aprobar OEJR/Argentina, así que el estado vive en un mapa
-`scope_status` dentro del documento de la versión, con clave
-`{brand}_{country}`. Guardarlo en el mismo documento —en vez de una colección
-aparte— permite resumir el estado de aprobación de todos los meses con una
-sola consulta.
+Aprobar OEA/México no significa aprobar OEJR/Argentina: son decisiones
+distintas y el estado tenía que separarlas.
+
+La primera solución fue un mapa `scope_status` dentro del documento de la
+versión, porque entonces una versión abarcaba las dos marcas y las cuatro
+regiones. Cuando las versiones pasaron a ser por calendario (ver el final de
+este documento) ese mapa dejó de tener sentido y el estado volvió a ser un
+campo normal. **La conclusión se mantuvo; el mecanismo se simplificó** — señal
+de que el problema real era el alcance de la versión, no el del estado.
 
 ## Campanita en vez de avisos flotantes
 
