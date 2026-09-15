@@ -22,11 +22,17 @@ convenciones visuales que las mantienen coherentes.
 En el encabezado, un control `− 100% +` agranda o reduce **toda** la
 aplicación. El porcentaje es un botón: devuelve al 100 %.
 
+**El encabezado nunca cambia de tamaño**: se escala solo lo que hay debajo. Es
+la barra de referencia de la herramienta —quién está conectado, idioma, el
+propio control— y moverla cada vez que alguien ajusta el contenido sería
+desconcertante.
+
 No es el zoom del navegador. El del navegador agranda el contenido pero no
 reduce el área de maquetación, así que en una pantalla pensada para caber
-entera aparece scroll de inmediato. Aquí la página se maqueta en un lienzo
-`1/k` más pequeño y se escala por `k`: todo se ve `k` veces más grande, las
-proporciones se conservan exactas y la pantalla sigue cabiendo.
+entera aparece scroll de inmediato. Aquí el contenido se maqueta en un lienzo
+`1/k` más pequeño que el hueco bajo el encabezado y se escala por `k`: se ve
+`k` veces más grande, las proporciones se conservan exactas y sigue cabiendo
+en ese hueco.
 
 **El máximo lo decide la pantalla, no un número fijo.** Tras cada aumento se
 comprueba si algo empezó a recortarse; si es así, se deshace ese paso y el `+`

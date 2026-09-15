@@ -167,9 +167,17 @@ sus semanas alineadas— aparece scroll en cuanto se sube un punto.
 
 La aplicación hace lo contrario: maqueta en un lienzo `1/k` más pequeño
 (`width`/`height` calculados) y lo escala por `k` con `transform`. Todo se ve
-más grande, las proporciones se conservan y la página sigue cabiendo. Se aplica
-a `<body>` y no a `#root` para que los modales —que se montan como hijos
-directos de `<body>`— se escalen igual que el resto.
+más grande, las proporciones se conservan y sigue cabiendo.
+
+**El lienzo cubre solo lo que hay bajo el encabezado** (`ZoomArea` →
+`.zoom-frame` + `.zoom-canvas`). El encabezado se queda a tamaño fijo: es la
+barra de referencia, y moverla al ajustar el contenido sería desconcertante.
+El lienzo se posiciona en absoluto dentro del marco a propósito: en flujo
+normal, `flex: 1` le daría la altura completa del hueco y al escalar
+desbordaría por `k`.
+
+Los modales no se escalan: se montan fuera del lienzo y así siempre caben en
+pantalla, por alto que esté el zoom.
 
 Consecuencia que hay que respetar al programar: **nada puede medirse contra el
 viewport**. Un `100dvh` dentro del lienzo escalado renderiza `k` veces la
@@ -177,10 +185,15 @@ altura de la pantalla y produce justo el scroll que se quería evitar. Se usa
 `100%` del lienzo.
 
 El tope no es un número fijo porque depende del monitor: tras cada aumento se
-cuenta cuántos elementos están recortando contenido y, si aumentaron, se
-deshace el paso. Comparar contra la medición anterior —en vez de exigir cero
-recortes— es lo que permite convivir con los recortes intencionados, como el
-texto de una nota limitado a dos líneas.
+mide cuánto contenido queda fuera de la vista y, si aumentó, se deshace el
+paso. Comparar contra la medición anterior —en vez de exigir cero recortes— es
+lo que permite convivir con los recortes intencionados, como el texto de una
+nota limitado a dos líneas.
+
+Se mide en dos sitios, porque son dos fallos distintos: elementos que recortan
+su propio contenido, y **el lienzo entero desbordando su hueco**. El segundo
+hay que medirlo aparte: `transform` no interviene en las métricas de scroll,
+así que el marco que lo contiene no lo delata.
 
 Se guarda en `localStorage`, no en la cuenta: el tamaño adecuado depende del
 monitor, no de la persona. Y **un nivel por tipo de pantalla**, no uno global:

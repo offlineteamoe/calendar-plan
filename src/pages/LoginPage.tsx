@@ -4,6 +4,7 @@ import { missingConfigKeys } from '../config'
 import { AnimatedBackground } from '../components/AnimatedBackground'
 import { LogoMark } from '../components/Logo'
 import { ZoomControl } from '../components/ZoomControl'
+import { ZoomArea } from '../components/ZoomArea'
 import { useI18n } from '../i18n/I18nContext'
 import { useTheme } from '../context/ThemeContext'
 import { LOCALES } from '../i18n/translations'
@@ -40,7 +41,8 @@ export function LoginPage() {
         </button>
       </div>
 
-      <div className="login-body">
+      <ZoomArea>
+        <div className="login-body">
         <div className="login-card">
           <span className="login-badge">
             <LogoMark size={18} />
@@ -71,8 +73,9 @@ export function LoginPage() {
           )}
 
           {error && <p className="error-text">{error}</p>}
+          </div>
         </div>
-      </div>
+      </ZoomArea>
     </div>
   )
 }

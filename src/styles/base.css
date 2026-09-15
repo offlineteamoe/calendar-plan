@@ -10,22 +10,11 @@ body,
   height: 100%;
 }
 
-/* El zoom de la aplicación (ver src/context/ZoomContext.tsx): el lienzo se
-   maqueta 1/k más pequeño y se escala por k. Resultado: todo se ve k veces más
-   grande, las proporciones se conservan y la página sigue cabiendo sin scroll.
-   Va en <body> —y no en #root— para que los modales, que se montan como hijos
-   directos de <body>, se escalen igual que el resto. */
 html {
   overflow: hidden;
 }
 
 body {
-  --app-zoom-safe: var(--app-zoom, 1);
-  width: calc(100% / var(--app-zoom-safe));
-  height: calc(100% / var(--app-zoom-safe));
-  transform: scale(var(--app-zoom-safe));
-  transform-origin: top left;
-  overflow: hidden;
   margin: 0;
   background: var(--bg);
   color: var(--ink);

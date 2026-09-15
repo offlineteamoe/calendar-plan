@@ -11,6 +11,7 @@ import { useVersions } from '../hooks/useVersions'
 import { AppHeader } from '../components/AppHeader'
 import { CalendarGrid } from '../features/calendar/CalendarGrid'
 import { CalendarScopeBar } from '../features/calendar/CalendarScopeBar'
+import { ZoomArea } from '../components/ZoomArea'
 import { VersionMetaModal } from '../features/calendar/VersionMetaModal'
 import { PasswordConfirmModal } from '../components/PasswordConfirmModal'
 import { FiltersPanel } from '../features/calendar/FiltersPanel'
@@ -182,6 +183,7 @@ export function CalendarPage() {
     return (
       <div className="shell">
         <AppHeader />
+        <ZoomArea>
         <div className="centered">
           <div className="card" style={{ padding: 28, textAlign: 'center' }}>
             <h2>{t('notFound.title')}</h2>
@@ -190,6 +192,7 @@ export function CalendarPage() {
             </Link>
           </div>
         </div>
+        </ZoomArea>
       </div>
     )
   }
@@ -213,6 +216,7 @@ export function CalendarPage() {
         undoRedo={undoRedo}
       />
 
+      <ZoomArea>
       <div className="mobile-switch">
         <button className={mobileTab === 'calendar' ? 'is-active' : ''} onClick={() => setMobileTab('calendar')}>
           {t('mobile.calendarTab')}
@@ -286,6 +290,7 @@ export function CalendarPage() {
           )}
         </div>
       </div>
+      </ZoomArea>
 
       {creatingVersion && version && (
         <VersionMetaModal

@@ -10,6 +10,34 @@
   overflow: hidden;
 }
 
+/* Zoom de la aplicación (ver src/context/ZoomContext.tsx).
+   El encabezado nunca cambia de tamaño: el escalado se aplica solo a lo que
+   hay debajo. `.zoom-frame` ocupa el espacio que sobra; `.zoom-canvas` se
+   maqueta 1/k más pequeño dentro de él y se escala por k, así que el
+   contenido se ve k veces más grande y sigue cabiendo exactamente en ese
+   hueco, sin scroll.
+   El lienzo se posiciona en absoluto a propósito: en flujo normal, `flex: 1`
+   le daría la altura completa y al escalar desbordaría por k. */
+.zoom-frame {
+  flex: 1;
+  min-height: 0;
+  position: relative;
+  overflow: hidden;
+}
+.zoom-canvas {
+  --app-zoom-safe: var(--app-zoom, 1);
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: calc(100% / var(--app-zoom-safe));
+  height: calc(100% / var(--app-zoom-safe));
+  transform: scale(var(--app-zoom-safe));
+  transform-origin: top left;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
 .shell-scroll {
   flex: 1;
   min-height: 0;

@@ -99,12 +99,29 @@ function apply(zoom: number) {
 }
 
 /**
- * Cuenta los elementos cuyo contenido está siendo recortado. No importa el
- * número absoluto —hay recortes intencionados, como el texto de una nota
- * limitado a dos líneas— sino si AUMENTA al subir el zoom: eso significa que
- * algo que antes se veía entero ha dejado de verse.
+ * Cuánto contenido está quedando fuera de la vista. No importa el número
+ * absoluto —hay recortes intencionados, como el texto de una nota limitado a
+ * dos líneas— sino si AUMENTA al subir el zoom: eso significa que algo que
+ * antes se veía entero ha dejado de verse.
+ *
+ * Se mide en dos sitios porque son dos fallos distintos:
+ *  · elementos que recortan su propio contenido, y
+ *  · el lienzo entero desbordando su hueco, que se nota como contenido
+ *    saliéndose por un lado. Ese hay que medirlo aparte: `transform` no
+ *    interviene en las métricas de scroll, así que el marco que lo contiene
+ *    no lo delata.
  */
-function countClipped(): number {
+function overflowScore(): number {
+  let score = countClippedElements()
+  const canvas = document.querySelector<HTMLElement>('.zoom-canvas')
+  if (canvas) {
+    if (canvas.scrollWidth - canvas.clientWidth > 2) score += 1
+    if (canvas.scrollHeight - canvas.clientHeight > 2) score += 1
+  }
+  return score
+}
+
+function countClippedElements(): number {
   const root = document.getElementById('root')
   if (!root) return 0
   let clipped = 0
@@ -168,13 +185,13 @@ export function ZoomProvider({ children }: { children: ReactNode }) {
     const next = clamp(current + STEP)
     if (next === current) return
 
-    const before = countClipped()
+    const before = overflowScore()
     apply(next)
     zoomRef.current = next
     setFor(pageKey, next)
     // Se mide en el siguiente fotograma, ya con la nueva maquetación.
     requestAnimationFrame(() => {
-      if (countClipped() > before) {
+      if (overflowScore() > before) {
         apply(current)
         zoomRef.current = current
         setFor(pageKey, current)

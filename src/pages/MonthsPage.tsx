@@ -7,6 +7,7 @@ import { useRole } from '../hooks/useRole'
 import { useI18n } from '../i18n/I18nContext'
 import { AppHeader } from '../components/AppHeader'
 import { AnimatedBackground } from '../components/AnimatedBackground'
+import { ZoomArea } from '../components/ZoomArea'
 import { NewMonthModal } from '../features/months/NewMonthModal'
 import { DeleteMonthModal } from '../features/months/DeleteMonthModal'
 import {
@@ -156,6 +157,7 @@ export function MonthsPage() {
     <div className="shell">
       <AppHeader />
 
+      <ZoomArea>
       <div className="hero hero-compact">
         <AnimatedBackground density={0.00006} />
         <div className="container hero-inner">
@@ -268,6 +270,8 @@ export function MonthsPage() {
           )}
         </div>
       </div>
+
+      </ZoomArea>
 
       {showNew && (
         <NewMonthModal

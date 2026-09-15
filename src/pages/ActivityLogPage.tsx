@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { listAllChanges } from '../lib/changelog'
 import { AppHeader } from '../components/AppHeader'
+import { ZoomArea } from '../components/ZoomArea'
 import { useI18n } from '../i18n/I18nContext'
 import { useRole } from '../hooks/useRole'
 import { describeChange } from '../lib/changeText'
@@ -40,6 +41,7 @@ export function ActivityLogPage() {
             </>
           }
         />
+        <ZoomArea>
         <div className="centered">
           <div className="card" style={{ padding: 28, textAlign: 'center', maxWidth: 420 }}>
             <h2>{t('logs.deniedTitle')}</h2>
@@ -48,6 +50,7 @@ export function ActivityLogPage() {
             </p>
           </div>
         </div>
+        </ZoomArea>
       </div>
     )
   }
@@ -66,6 +69,7 @@ export function ActivityLogPage() {
         }
       />
 
+      <ZoomArea>
       <div className="shell-scroll">
         <div className="container">
           <div className="log-filters">
@@ -140,6 +144,7 @@ export function ActivityLogPage() {
           )}
         </div>
       </div>
+      </ZoomArea>
     </div>
   )
 }
