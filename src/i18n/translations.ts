@@ -256,6 +256,8 @@ export const translations: Record<Locale, Record<string, string>> = {
     'password.tooShort': 'Usa al menos 6 caracteres.',
     'password.mismatch': 'Las dos no coinciden.',
     'password.setupBtn': 'Guardar contraseña',
+    'months.emptyHelp': 'Crea el primero y empieza a planificar la inversión semana a semana.',
+    'months.emptyFiltered': 'Prueba con otro filtro o con otro año.',
   },
 
   en: {
@@ -501,6 +503,8 @@ export const translations: Record<Locale, Record<string, string>> = {
     'password.tooShort': 'Use at least 6 characters.',
     'password.mismatch': 'The two do not match.',
     'password.setupBtn': 'Save password',
+    'months.emptyHelp': 'Create the first one and start planning spend week by week.',
+    'months.emptyFiltered': 'Try another filter or another year.',
   },
 
   pt: {
@@ -746,5 +750,7 @@ export const translations: Record<Locale, Record<string, string>> = {
     'password.tooShort': 'Use pelo menos 6 caracteres.',
     'password.mismatch': 'As duas não coincidem.',
     'password.setupBtn': 'Salvar senha',
+    'months.emptyHelp': 'Crie o primeiro e comece a planejar o investimento semana a semana.',
+    'months.emptyFiltered': 'Tente outro filtro ou outro ano.',
   },
 }

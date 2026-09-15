@@ -1201,6 +1201,7 @@
   position: relative;
   display: flex;
   align-items: stretch;
+  overflow: hidden;
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--r-lg);
@@ -1300,13 +1301,79 @@
   right: 0;
   left: auto;
 }
+/* ============ Estado vacío con presencia ============ */
+
 .months-empty {
+  display: flex;
+  justify-content: center;
+  padding: 40px 20px 70px;
+}
+.empty-card {
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 14px;
-  padding: 54px 20px 70px;
+  gap: 12px;
+  max-width: 460px;
+  padding: 44px 40px 40px;
   text-align: center;
+  border: 1px solid var(--border);
+  border-radius: var(--r-xl);
+  background: var(--surface);
+  box-shadow: var(--shadow-md);
+  overflow: hidden;
+  animation: rise-in 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+/* Un resplandor tenue detrás del icono, para que la tarjeta no sea un rectángulo. */
+.empty-card::before {
+  content: '';
+  position: absolute;
+  top: -110px;
+  left: 50%;
+  width: 320px;
+  height: 320px;
+  transform: translateX(-50%);
+  border-radius: 50%;
+  background: radial-gradient(circle, var(--accent-glow) 0%, transparent 65%);
+  pointer-events: none;
+}
+.empty-orb {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 68px;
+  height: 68px;
+  border-radius: 22px;
+  color: #fff;
+  background: var(--grad-accent);
+  box-shadow: var(--shadow-glow);
+}
+/* Anillo que late despacio: señal de que la herramienta está viva, no rota. */
+.empty-orb::after {
+  content: '';
+  position: absolute;
+  inset: -8px;
+  border-radius: 28px;
+  border: 1.5px solid var(--accent);
+  opacity: 0.35;
+  animation: orb-pulse 2.8s ease-in-out infinite;
+}
+@keyframes orb-pulse {
+  0%, 100% { transform: scale(1); opacity: 0.35; }
+  50% { transform: scale(1.08); opacity: 0; }
+}
+.empty-title {
+  position: relative;
+  font-size: 20px;
+  margin: 4px 0 0;
+}
+.empty-help {
+  position: relative;
+  margin: 0 0 6px;
+  font-size: 13.5px;
+  line-height: 1.5;
+  color: var(--ink-soft);
+  max-width: 34ch;
 }
 
 @media (max-width: 720px) {
@@ -1987,4 +2054,60 @@
 .mini-btn-danger:hover:not(:disabled) {
   background: color-mix(in srgb, #DC3B34 14%, transparent);
   color: #DC3B34;
+}
+
+
+/* ============ Filas de mes: más presencia ============ */
+
+/* Barra de color a la izquierda, del mismo tono que la fase. */
+.month-row::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: var(--nc, var(--accent));
+  opacity: 0.85;
+}
+.month-row.phase-current { --nc: #0F9B76; }
+.month-row.phase-planning { --nc: #2B6BFF; }
+.month-row.phase-closed { --nc: #8A93A6; }
+
+/* Brillo que recorre la fila al pasar el cursor. */
+.month-row::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(100deg, transparent 30%, var(--accent-soft) 50%, transparent 70%);
+  opacity: 0;
+  transition: opacity 0.25s ease;
+  pointer-events: none;
+}
+.month-row:hover::after {
+  opacity: 0.5;
+}
+
+/* Botón principal con más cuerpo: el "+" en su propia cápsula. */
+.btn-plus {
+  display: inline-grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.22);
+  font-size: 13px;
+  line-height: 1;
+  font-weight: 800;
+}
+.btn-lg {
+  padding: 13px 24px;
+  font-size: 14.5px;
+}
+
+/* El fondo del contenido deja de ser un folio en blanco. */
+.shell-scroll {
+  background:
+    radial-gradient(90% 55% at 50% 0%, var(--surface-3) 0%, transparent 60%),
+    var(--bg);
 }

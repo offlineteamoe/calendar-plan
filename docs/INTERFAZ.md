@@ -93,7 +93,14 @@ Septiembre          MES EN CURSO    ● Todos los calendarios aprobados      →
 - **Menú ⋯** con *Eliminar mes*, solo para administradores.
 
 Pestañas de año arriba (el año en curso y cualquier otro con meses). Un único
-botón de *Nuevo mes*, solo para administradores.
+botón de *Nuevo mes*, solo para administradores — y **solo uno**: cuando la
+lista está vacía desaparece de la barra, porque el estado vacío ya ofrece el
+suyo.
+
+**Cuando no hay meses** no queda un texto suelto en medio de un folio en
+blanco: una tarjeta con icono, título, una línea de ayuda y la llamada a la
+acción. El icono lleva un anillo que late despacio — señal de que la
+herramienta está viva y no rota.
 
 Crear un mes abre un modal propio (selector de año y mes, no el calendario
 nativo del navegador) y siembra una versión A por cada calendario.

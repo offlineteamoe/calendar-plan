@@ -196,9 +196,10 @@ export function MonthsPage() {
               ))}
             </div>
 
-            {canEdit && (
+            {canEdit && visible.length > 0 && (
               <button className="btn btn-primary months-new" onClick={() => setShowNew(true)}>
-                + {t('months.new')}
+                <span className="btn-plus">+</span>
+                {t('months.new')}
               </button>
             )}
           </div>
@@ -215,7 +216,7 @@ export function MonthsPage() {
               const phase = monthPhase(m.month_key)
               const approval = approvalOf(versionsQuery.data?.get(m.month_key) ?? [])
               return (
-                <div className="month-row rise-in" key={m.month_key}>
+                <div className={`month-row rise-in phase-${phase}`} key={m.month_key}>
                   <button className="month-row-btn" onClick={() => navigate(`/calendar/${m.month_key}`)}>
                     <span className="month-row-id">
                       <span className="month-row-name">{monthName(m.month_key, locale)}</span>
@@ -260,12 +261,25 @@ export function MonthsPage() {
 
           {visible.length === 0 && !monthsQuery.isLoading && !monthsQuery.isError && (
             <div className="months-empty">
-              <p className="muted">{t('months.empty', { year: activeYear })}</p>
-              {canEdit && phaseFilter === 'all' && (
-                <button className="btn btn-primary" onClick={() => setShowNew(true)}>
-                  + {t('months.new')}
-                </button>
-              )}
+              <div className="empty-card">
+                <span className="empty-orb" aria-hidden>
+                  <svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="currentColor" strokeWidth="1.6">
+                    <rect x="3" y="4.5" width="18" height="16" rx="3" />
+                    <path d="M3 9.5h18M8 2.5v4M16 2.5v4" strokeLinecap="round" />
+                    <path d="M7.5 13.5h3M13.5 13.5h3M7.5 17h3" strokeLinecap="round" />
+                  </svg>
+                </span>
+                <h2 className="empty-title">{t('months.empty', { year: activeYear })}</h2>
+                <p className="empty-help">
+                  {canEdit && phaseFilter === 'all' ? t('months.emptyHelp') : t('months.emptyFiltered')}
+                </p>
+                {canEdit && phaseFilter === 'all' && (
+                  <button className="btn btn-primary btn-lg" onClick={() => setShowNew(true)}>
+                    <span className="btn-plus">+</span>
+                    {t('months.new')}
+                  </button>
+                )}
+              </div>
             </div>
           )}
         </div>
