@@ -36,7 +36,17 @@ Los tres administradores están escritos en el código y en las reglas, así que
 la herramienta funciona. Crear `config/roles` en Firestore permite **añadir o
 quitar administradores sin volver a desplegar**. Paso 2 de los pasos manuales.
 
-## 4. Gasto real ejecutado — fase 2
+## 4. Datasets pesados desde Drive
+
+Decidido, sin construir. Los datos que produce un proceso por lotes —tarifas,
+ratings, feeds, gasto ejecutado— viven como JSON en una carpeta de la unidad
+compartida, no en Firestore, y la aplicación los lee con la sesión de Google de
+quien entra. Ver [DECISIONES.md](DECISIONES.md), "Dónde vive cada dato".
+
+Antes de empezar hace falta decidir tres cosas: qué datasets son y cada cuánto
+cambian, qué hace la aplicación con ellos, y el tamaño en filas del más grande.
+
+## 5. Gasto real ejecutado — fase 2
 
 La colección `real` existe en el esquema y está vacía a propósito. Falta
 poblarla desde `BDD PAUTA & SPOTFIRE`, usando `source_ref` como punto de
@@ -45,7 +55,7 @@ enganche.
 Cuando llegue, habrá que decidir si el bucket `LT_EXCL_MX_AR` necesita
 desagregarse con porcentajes de atribución reales.
 
-## 5. Consulta por lenguaje natural (MCP)
+## 6. Consulta por lenguaje natural (MCP)
 
 Objetivo declarado: poder preguntar *"¿cómo fue la estrategia semanal de
 septiembre 2026 para OEA México? ¿Qué creativos rotamos?"*.
@@ -57,7 +67,7 @@ final de [DATA-MODEL.md](DATA-MODEL.md).
 
 Falta el conector en sí.
 
-## 6. Limpieza menor
+## 7. Limpieza menor
 
 - **Meses creados antes del 2026-09-14** tienen una versión `A` sin `brand` ni
   `country`, anterior al alcance por calendario. La aplicación las ignora y
@@ -69,7 +79,7 @@ Falta el conector en sí.
   diez personas con buena conexión no es un problema real; si alguna vez lo
   fuera, el candidato obvio es cargar el SDK de Firestore de forma diferida.
 
-## 7. Verificado a medias
+## 8. Verificado a medias
 
 Estas partes están implementadas y compiladas, pero **no se han probado con dos
 personas reales a la vez**:

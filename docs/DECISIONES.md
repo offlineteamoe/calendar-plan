@@ -220,3 +220,64 @@ Ahora el documento de la versión lleva `brand` y `country`, su id es
 de ese calendario. Como cada documento ya es de un solo calendario, el estado
 de aprobación es un campo normal (`status`) en vez del mapa `scope_status` que
 hacía falta cuando una versión abarcaba ocho calendarios a la vez.
+
+
+## Dónde vive cada dato: Firestore o un archivo en Drive
+
+Decidido el 2026-09-15, antes de construirlo.
+
+**La regla.** Si un dato lo edita una persona en pantalla, va a Firestore. Si
+un dato lo produce un proceso por lotes, va a un archivo.
+
+```
+Firestore  →  plan, notas, versiones, escenarios, historial
+              pocos, mutables, colaborativos, en tiempo real
+
+Drive      →  tarifas, ratings, feeds, gasto ejecutado
+              muchos, de solo lectura, regenerados por lote
+```
+
+**Por qué no todo en Firestore.** Firestore cobra por documento leído. Un
+dataset procesado de 50.000 filas serían 50.000 lecturas por apertura: el cupo
+diario entero en dos aperturas. El mismo dataset como un JSON es **una sola
+descarga**, sin coste por fila. No es preferencia estética: es la diferencia
+entre viable e inviable.
+
+**Por qué Drive y no otro sitio.** Los permisos se heredan de la unidad
+compartida: quien no la tenga compartida no lee el dato, y lo impone Google.
+No hay un segundo sistema de permisos que mantener sincronizado con el primero.
+Se descartó GitHub —las páginas publicadas son públicas y esto es información
+confidencial— y Firebase Storage está por confirmar si exige plan de pago.
+
+**Los JSON los genera Apps Script** con disparador programado: corre dentro de
+Google, tiene acceso nativo a Drive y no es un servidor que nadie mantenga
+encendido.
+
+### Las dos cosas que van a morder
+
+**1. El token de Drive no es el de Firebase.** La sesión de Firebase sirve para
+Firestore, no para Drive. Firebase puede devolver un token de OAuth al iniciar
+sesión, pero **dura una hora y en el navegador no hay token de refresco**: a la
+hora, las lecturas de Drive fallan. La solución probada está en el dashboard
+`PPT HTML` del equipo: Google Identity Services con `initTokenClient` y
+renovación silenciosa, conviviendo con la sesión de Firebase. Son dos fuentes
+de credencial, no una.
+
+**2. El permiso que se pide.** Leer archivos ajenos exige el permiso
+`drive.readonly`, que en la pantalla de consentimiento se lee como "ver todos
+tus archivos de Drive" — mucho pedir para diez personas. La alternativa es
+`drive.file` más el **Google Picker**: la persona elige la carpeta una vez y la
+aplicación solo alcanza lo que eligió. Más trabajo, pero un permiso que
+cualquiera acepta sin pensárselo.
+
+### La velocidad no sale de Drive
+
+Drive no es una CDN: cada lectura es una llamada autenticada de cientos de
+milisegundos. El rendimiento sale de tres decisiones nuestras:
+
+1. **Formato compacto** — cabecera más filas como arrays, no objetos con la
+   clave repetida en cada fila. Reduce entre 3 y 5 veces.
+2. **Un archivo por propósito**, pequeño, en vez de uno gigante.
+3. **Caché local por versión** — se guarda la copia en IndexedDB y solo se
+   vuelve a descargar si cambió el `modifiedTime` del archivo. La primera carga
+   cuesta; las siguientes son instantáneas.
