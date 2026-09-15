@@ -202,13 +202,33 @@ export interface BloqueoRow {
   created_at: string
 }
 
-/** Documento Firestore months/{month_key}. */
+/**
+ * Documento Firestore `months/{month_id}`.
+ *
+ * El id del documento y la clave del mes son cosas distintas, y es
+ * deliberado: al eliminar un mes este no se borra, se marca `trashed` y sigue
+ * ocupando su id. Si después se crea otro septiembre, necesita un id propio.
+ * Por eso `month_key` es un campo —de ahí salen las fechas y las etiquetas— y
+ * el id es solo una dirección.
+ *
+ * El id empieza siempre por `YYYY-MM`, así que sigue siendo legible.
+ */
 export interface MonthEntry {
+  month_id: string
   month_key: string // "2026-09"
-  status: 'active' | 'archived'
+  status: 'active' | 'trashed'
   created_by: string
   created_at: string
+  /** Se muestra tras el nombre si al restaurar ya había otro mes con esa clave. */
+  label_suffix?: string
+  deleted_at?: string
+  deleted_by?: string
+  /** Última escritura registrada antes de eliminarlo, para distinguir dos meses iguales. */
+  last_activity_at?: string
 }
+
+/** Días que un mes eliminado se conserva antes de borrarse de verdad. */
+export const TRASH_RETENTION_DAYS = 30
 
 /**
  * Registro de un cambio, en months/{monthKey}/changes/{change_id}.

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { createMonth, deleteMonth, listMonths, listVersionsByMonth } from '../lib/store'
+import { createMonth, listMonths, listVersionsByMonth, trashMonth } from '../lib/store'
 import { useAuth } from '../context/AuthContext'
 import { useRole } from '../hooks/useRole'
 import { useI18n } from '../i18n/I18nContext'
@@ -117,15 +117,16 @@ export function MonthsPage() {
       void queryClient.invalidateQueries({ queryKey: ['months'] })
       void queryClient.invalidateQueries({ queryKey: ['versions-by-month'] })
       setShowNew(false)
-      navigate(`/calendar/${entry.month_key}`)
+      navigate(`/calendar/${entry.month_id}`)
     },
   })
 
   const deleteMutation = useMutation({
-    mutationFn: (monthKey: string) => deleteMonth(monthKey, author),
+    mutationFn: (month: MonthEntry) => trashMonth(month, author),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['months'] })
       void queryClient.invalidateQueries({ queryKey: ['versions-by-month'] })
+      void queryClient.invalidateQueries({ queryKey: ['trashed-months'] })
       setDeleteTarget(null)
     },
   })
@@ -214,12 +215,15 @@ export function MonthsPage() {
           <div className="month-rows">
             {visible.map((m) => {
               const phase = monthPhase(m.month_key)
-              const approval = approvalOf(versionsQuery.data?.get(m.month_key) ?? [])
+              const approval = approvalOf(versionsQuery.data?.get(m.month_id) ?? [])
               return (
                 <div className={`month-row rise-in phase-${phase}`} key={m.month_key}>
-                  <button className="month-row-btn" onClick={() => navigate(`/calendar/${m.month_key}`)}>
+                  <button className="month-row-btn" onClick={() => navigate(`/calendar/${m.month_id}`)}>
                     <span className="month-row-id">
-                      <span className="month-row-name">{monthName(m.month_key, locale)}</span>
+                      <span className="month-row-name">
+                        {monthName(m.month_key, locale)}
+                        {m.label_suffix && <span className="month-row-tag">{t('months.restoredTag')}</span>}
+                      </span>
                       <span className="month-row-year">{m.month_key}</span>
                     </span>
 
@@ -301,7 +305,7 @@ export function MonthsPage() {
         <DeleteMonthModal
           monthLabel={monthName(deleteTarget.month_key, locale)}
           onClose={() => setDeleteTarget(null)}
-          onConfirmed={() => deleteMutation.mutate(deleteTarget.month_key)}
+          onConfirmed={() => deleteMutation.mutate(deleteTarget)}
           isPending={deleteMutation.isPending}
           errorMessage={deleteMutation.isError ? (deleteMutation.error as Error).message : undefined}
         />

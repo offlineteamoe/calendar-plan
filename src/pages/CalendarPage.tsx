@@ -42,6 +42,9 @@ import {
 type MobileTab = 'calendar' | 'detail'
 
 export function CalendarPage() {
+  // La URL lleva el ID del mes, que no tiene por qué ser su clave: un mes
+  // eliminado conserva su id en la papelera, así que otro septiembre posterior
+  // necesita uno propio. Las fechas y las etiquetas salen del documento.
   const { monthKey = '' } = useParams()
   const navigate = useNavigate()
   const { user } = useAuth()
@@ -82,14 +85,15 @@ export function CalendarPage() {
     if (!LATAM_PARTS.includes(country)) setLatamView(false)
   }, [country])
 
-  const weeks = useMemo(() => getMonthWeeks(monthKey), [monthKey])
+  const monthDateKey = monthQuery.data?.month_key ?? monthKey
+  const weeks = useMemo(() => getMonthWeeks(monthDateKey), [monthDateKey])
 
   const monthLabel = useMemo(() => {
-    const [y, m] = monthKey.split('-').map(Number)
-    if (!y || !m) return monthKey
+    const [y, m] = monthDateKey.split('-').map(Number)
+    if (!y || !m) return monthDateKey
     const label = new Date(y, m - 1, 1).toLocaleDateString(locale, { month: 'long', year: 'numeric' })
     return label.charAt(0).toUpperCase() + label.slice(1)
-  }, [monthKey, locale])
+  }, [monthDateKey, locale])
 
   const scope: Scope | null = version ? { versionId: version.version_id, brand, country } : null
 
@@ -263,6 +267,7 @@ export function CalendarPage() {
                 />
                 <CalendarGrid
                   monthKey={monthKey}
+                  monthDateKey={monthDateKey}
                   scope={scope}
                   version={version}
                   channel={channel}

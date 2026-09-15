@@ -8,7 +8,10 @@ import { useRole } from '../../hooks/useRole'
 import { useI18n } from '../../i18n/I18nContext'
 
 interface Props {
+  /** Id del documento del mes: es la ruta en la base de datos. */
   monthKey: string
+  /** Clave real del mes (`YYYY-MM`): de aquí salen las semanas y los días. */
+  monthDateKey: string
   scope: Scope
   version: VersionEntry
   channel: string
@@ -17,7 +20,7 @@ interface Props {
   latamView: boolean
 }
 
-export function CalendarGrid({ monthKey, scope, version, channel, latamView }: Props) {
+export function CalendarGrid({ monthKey, monthDateKey, scope, version, channel, latamView }: Props) {
   const { user } = useAuth()
   const { canEdit } = useRole()
   const { t, locale } = useI18n()
@@ -53,7 +56,7 @@ export function CalendarGrid({ monthKey, scope, version, channel, latamView }: P
     spendByDate.set(r.date, (spendByDate.get(r.date) ?? 0) + r.planned_spend)
   }
 
-  const weeks = getMonthWeeks(monthKey)
+  const weeks = getMonthWeeks(monthDateKey)
   const dayNames = weekdayLabels(locale)
 
   return (
@@ -86,7 +89,7 @@ export function CalendarGrid({ monthKey, scope, version, channel, latamView }: P
             <div className="cal-row aligned-week" key={week.weekStart}>
               <span className="cal-wk">{isoWeekNumber(week.weekStart)}</span>
               {week.days.map((date) => {
-                const inMonth = isInMonth(date, monthKey)
+                const inMonth = isInMonth(date, monthDateKey)
                 const value = spendByDate.get(date)
                 return (
                   <div key={date} className={`cal-cell ${inMonth ? '' : 'is-outside'} ${value ? 'has-value' : ''}`}>

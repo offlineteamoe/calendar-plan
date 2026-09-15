@@ -281,3 +281,31 @@ milisegundos. El rendimiento sale de tres decisiones nuestras:
 3. **Caché local por versión** — se guarda la copia en IndexedDB y solo se
    vuelve a descargar si cambió el `modifiedTime` del archivo. La primera carga
    cuesta; las siguientes son instantáneas.
+
+
+## La papelera marca, no copia
+
+Al eliminar un mes hay dos formas de poder recuperarlo: copiarlo entero a una
+papelera, o marcarlo y esconderlo. Un mes lleno son del orden de mil
+documentos, así que copiar habría costado unas 2.000 lecturas y 2.000
+escrituras **por cada borrado** — un 10 % del cupo diario gratuito. Marcar
+cuesta una lectura y una escritura.
+
+Además de barato es más seguro: como el contenido nunca se mueve, restaurar no
+puede dejarlo a medias. Una copia interrumpida sí.
+
+**La consecuencia es que el id del documento dejó de ser la clave del mes.** Un
+mes en la papelera conserva su id, así que un septiembre posterior necesita el
+suyo. Ahora `month_key` es un campo y el id es solo una dirección, que empieza
+por `YYYY-MM` para seguir siendo legible en la URL. Eso es lo que permite tener
+dos septiembres eliminados a la vez, distinguibles por su fecha de creación y
+su última actividad.
+
+Al restaurar, si ya existe otro mes activo con esa clave, el recuperado se
+marca con un distintivo en vez de rechazar la operación: quien restaura sabe
+lo que busca, y bloquearlo obligaría a borrar el otro primero.
+
+La purga a los 30 días ocurre al abrir la papelera. No hay servidor que pueda
+hacerlo en segundo plano, y colgarlo de una acción que ya es de
+administradores evita inventar un mecanismo entero para algo que no corre
+prisa.

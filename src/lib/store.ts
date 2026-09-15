@@ -11,6 +11,7 @@ import {
   collection,
   collectionGroup,
   deleteDoc,
+  limit as fbLimit,
   doc,
   getDoc,
   getDocs,
@@ -30,6 +31,7 @@ import {
   COLLECTIONS,
   COUNTRIES,
   COUNTRY_LABELS,
+  TRASH_RETENTION_DAYS,
   type Brand,
   type Country,
   type EscenarioRow,
@@ -81,12 +83,15 @@ function stamped<T extends object>(monthKey: string, scope: Scope, versionLetter
 
 export async function listMonths(): Promise<MonthEntry[]> {
   const snapshot = await getDocs(query(collection(getDb(), COLLECTIONS.months), orderBy('month_key', 'desc')))
-  return snapshot.docs.filter((d) => d.id !== GLOBAL_LOG_KEY).map((d) => d.data() as MonthEntry)
+  return snapshot.docs
+    .filter((d) => d.id !== GLOBAL_LOG_KEY)
+    .map((d) => normalizeMonth(d.id, d.data() as Record<string, unknown>))
+    .filter((m) => m.status !== 'trashed')
 }
 
-export async function getMonth(monthKey: string): Promise<MonthEntry | null> {
-  const snap = await getDoc(doc(getDb(), COLLECTIONS.months, monthKey))
-  return snap.exists() ? (snap.data() as MonthEntry) : null
+export async function getMonth(monthId: string): Promise<MonthEntry | null> {
+  const snap = await getDoc(doc(getDb(), COLLECTIONS.months, monthId))
+  return snap.exists() ? normalizeMonth(snap.id, snap.data() as Record<string, unknown>) : null
 }
 
 /**
@@ -97,12 +102,46 @@ export async function getMonth(monthKey: string): Promise<MonthEntry | null> {
  */
 export const GLOBAL_LOG_KEY = '_global'
 
+/**
+ * Tolera meses guardados antes de que el id y la clave fueran cosas distintas.
+ */
+export function normalizeMonth(id: string, raw: Record<string, unknown>): MonthEntry {
+  return {
+    month_id: String(raw.month_id ?? id),
+    month_key: String(raw.month_key ?? id),
+    // El estado anterior era 'active' | 'archived'; cualquier cosa que no sea
+    // 'trashed' cuenta como activo.
+    status: raw.status === 'trashed' ? 'trashed' : 'active',
+    created_by: String(raw.created_by ?? ''),
+    created_at: String(raw.created_at ?? ''),
+    ...(raw.label_suffix ? { label_suffix: String(raw.label_suffix) } : {}),
+    ...(raw.deleted_at ? { deleted_at: String(raw.deleted_at) } : {}),
+    ...(raw.deleted_by ? { deleted_by: String(raw.deleted_by) } : {}),
+    ...(raw.last_activity_at ? { last_activity_at: String(raw.last_activity_at) } : {}),
+  }
+}
+
+/**
+ * Un id libre para un mes nuevo. Se prefiere la clave tal cual —queda legible
+ * en la URL— y solo si está ocupada (por un mes activo o por uno en la
+ * papelera) se le añade un sufijo.
+ */
+async function freeMonthId(monthKey: string): Promise<string> {
+  const db = getDb()
+  if (!(await getDoc(doc(db, COLLECTIONS.months, monthKey))).exists()) return monthKey
+  return `${monthKey}-${Date.now().toString(36)}`
+}
+
 export async function createMonth(monthKey: string, author: ChangeAuthor): Promise<MonthEntry> {
   const db = getDb()
-  const ref = doc(db, COLLECTIONS.months, monthKey)
-  if ((await getDoc(ref)).exists()) throw new Error(`El mes ${monthKey} ya existe.`)
+  const existing = await listMonths()
+  if (existing.some((m) => m.month_key === monthKey)) throw new Error(`El mes ${monthKey} ya existe.`)
+
+  const monthId = await freeMonthId(monthKey)
+  const ref = doc(db, COLLECTIONS.months, monthId)
   const createdBy = author.email
   const entry: MonthEntry = {
+    month_id: monthId,
     month_key: monthKey,
     status: 'active',
     created_by: createdBy,
@@ -116,7 +155,7 @@ export async function createMonth(monthKey: string, author: ChangeAuthor): Promi
   const seed = writeBatch(db)
   for (const brand of BRANDS) {
     for (const country of COUNTRIES) {
-      seed.set(doc(db, COLLECTIONS.months, monthKey, COLLECTIONS.versions, versionDocId(brand, country, 'A')), {
+      seed.set(doc(db, COLLECTIONS.months, monthId, COLLECTIONS.versions, versionDocId(brand, country, 'A')), {
         version_id: 'A',
         brand,
         country,
@@ -145,12 +184,119 @@ export async function createMonth(monthKey: string, author: ChangeAuthor): Promi
   return entry
 }
 
+/** Meses en la papelera, el más recientemente eliminado primero. */
+export async function listTrashedMonths(): Promise<MonthEntry[]> {
+  const snapshot = await getDocs(collection(getDb(), COLLECTIONS.months))
+  return snapshot.docs
+    .filter((d) => d.id !== GLOBAL_LOG_KEY)
+    .map((d) => normalizeMonth(d.id, d.data() as Record<string, unknown>))
+    .filter((m) => m.status === 'trashed')
+    .sort((a, b) => ((a.deleted_at ?? '') < (b.deleted_at ?? '') ? 1 : -1))
+}
+
+/**
+ * Manda un mes a la papelera. NO borra nada: marca el documento y lo esconde
+ * de la lista. Restaurarlo es volver a marcarlo, así que el contenido regresa
+ * exactamente como estaba — no hay copia que pueda quedar incompleta.
+ *
+ * Cuesta una lectura y una escritura, frente a las miles que costaría copiar
+ * el mes entero a otro sitio.
+ */
+export async function trashMonth(month: MonthEntry, author: ChangeAuthor): Promise<void> {
+  const db = getDb()
+
+  // Última actividad registrada: es lo que permite distinguir dos meses con la
+  // misma clave en la papelera.
+  let lastActivity = month.created_at
+  try {
+    const snap = await getDocs(
+      query(subCol(db, month.month_id, COLLECTIONS.changes), orderBy('at', 'desc'), fbLimit(1)),
+    )
+    if (!snap.empty) lastActivity = String(snap.docs[0].data().at ?? lastActivity)
+  } catch {
+    // Sin historial legible se queda la fecha de creación: es orientativo.
+  }
+
+  const next: MonthEntry = {
+    ...month,
+    status: 'trashed',
+    deleted_at: new Date().toISOString(),
+    deleted_by: author.email,
+    last_activity_at: lastActivity,
+  }
+  await setDoc(doc(db, COLLECTIONS.months, month.month_id), pruneUndefined(next))
+
+  await recordChange({
+    monthKey: GLOBAL_LOG_KEY,
+    entity: 'version',
+    docId: month.month_id,
+    action: 'delete',
+    whereLabel: month.month_key,
+    placeKey: 'place.months',
+    summaryKey: 'ev.month.trash',
+    summaryParams: { month: month.month_key },
+    before: month as unknown as Record<string, unknown>,
+    after: null,
+    author,
+  })
+}
+
+/**
+ * Devuelve un mes de la papelera. Si mientras tanto se creó otro con la misma
+ * clave, el recuperado se marca para mostrarse con un distintivo — así los dos
+ * conviven sin confundirse.
+ */
+export async function restoreMonth(month: MonthEntry, author: ChangeAuthor): Promise<MonthEntry> {
+  const active = await listMonths()
+  const clash = active.some((m) => m.month_key === month.month_key)
+
+  const next: MonthEntry = {
+    ...month,
+    status: 'active',
+    deleted_at: undefined,
+    deleted_by: undefined,
+    ...(clash ? { label_suffix: 'restaurado' } : {}),
+  }
+  await setDoc(doc(getDb(), COLLECTIONS.months, month.month_id), pruneUndefined(next))
+
+  await recordChange({
+    monthKey: GLOBAL_LOG_KEY,
+    entity: 'version',
+    docId: month.month_id,
+    action: 'create',
+    whereLabel: month.month_key,
+    placeKey: 'place.months',
+    summaryKey: 'ev.month.restore',
+    summaryParams: { month: month.month_key },
+    before: month as unknown as Record<string, unknown>,
+    after: next as unknown as Record<string, unknown>,
+    author,
+  })
+  return next
+}
+
+/**
+ * Borra de verdad los meses cuya retención expiró. Se ejecuta al abrir la
+ * papelera: no hay servidor que pueda hacerlo en segundo plano, y hacerlo aquí
+ * no cuesta nada mientras no haya nada caducado.
+ */
+export async function purgeExpiredTrash(author: ChangeAuthor): Promise<number> {
+  const cutoff = new Date(Date.now() - TRASH_RETENTION_DAYS * 86_400_000).toISOString()
+  const expired = (await listTrashedMonths()).filter((m) => (m.deleted_at ?? '') < cutoff)
+  for (const month of expired) {
+    await purgeMonth(month, author)
+  }
+  return expired.length
+}
+
 export async function setMonthStatus(monthKey: string, status: MonthEntry['status']): Promise<void> {
   await updateDoc(doc(getDb(), COLLECTIONS.months, monthKey), { status })
 }
 
-export async function deleteMonth(monthKey: string, author: ChangeAuthor): Promise<void> {
+/** Borrado definitivo: el mes y todas sus subcolecciones. No tiene vuelta. */
+export async function purgeMonth(month: MonthEntry, author: ChangeAuthor): Promise<void> {
   const db = getDb()
+  const monthKey = month.month_id
   const subCollections = [
     COLLECTIONS.versions,
     COLLECTIONS.plan,
@@ -177,10 +323,10 @@ export async function deleteMonth(monthKey: string, author: ChangeAuthor): Promi
     entity: 'version',
     docId: monthKey,
     action: 'delete',
-    whereLabel: monthKey,
+    whereLabel: month.month_key,
     placeKey: 'place.months',
     summaryKey: 'ev.month.delete',
-    summaryParams: { month: monthKey },
+    summaryParams: { month: month.month_key },
     before: null,
     after: null,
     author,

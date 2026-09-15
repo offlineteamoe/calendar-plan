@@ -47,16 +47,35 @@ arranca siempre en `maybe`.
 
 ## Colecciones
 
-### `months/{month_key}`
+### `months/{month_id}`
 
-`month_key` tiene formato `YYYY-MM` (`2026-09`). Un documento por mes.
+**El id del documento y la clave del mes son cosas distintas.** Al eliminar un
+mes no se borra: se marca `trashed` y sigue ocupando su id. Si después se crea
+otro septiembre, necesita un id propio. Por eso `month_key` es un campo —de ahí
+salen las fechas y las etiquetas— y el id es solo una dirección.
+
+El id empieza siempre por `YYYY-MM`, así que sigue siendo legible en la URL: es
+la clave tal cual cuando está libre, y `YYYY-MM-<sufijo>` cuando no.
 
 | Campo | Tipo | Notas |
 |---|---|---|
-| `month_key` | string | `2026-09` |
-| `status` | string | heredado; la interfaz ya no lo usa |
-| `created_by` | string | email |
-| `created_at` | string | ISO 8601 |
+| `month_id` | string | igual al id del documento |
+| `month_key` | string | `2026-09`; de aquí salen fechas y etiquetas |
+| `status` | `active` \| `trashed` | los `trashed` no aparecen en la lista |
+| `created_by`, `created_at` | string | |
+| `label_suffix` | string | `restaurado`, si al recuperarlo ya existía otro con su clave |
+| `deleted_at`, `deleted_by` | string | solo en la papelera |
+| `last_activity_at` | string | última escritura antes de eliminarlo |
+
+**La papelera.** Eliminar un mes cuesta **una lectura y una escritura**: se
+marca el documento y se esconde. Restaurarlo es volver a marcarlo, así que el
+contenido regresa exactamente como estaba — no hay copia que pueda quedar a
+medias. Copiar el mes a otra colección habría costado miles de operaciones por
+borrado.
+
+Se conservan **30 días**. La purga ocurre al abrir la papelera: no hay servidor
+que pueda hacerlo en segundo plano, y hacerlo ahí no cuesta nada mientras no
+haya nada caducado.
 
 La **fase** del mes (mes en curso / planeación futura / mes cerrado) **no se
 guarda**: se deduce comparando `month_key` con la fecha de hoy (`monthPhase()`
