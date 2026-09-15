@@ -244,6 +244,11 @@ export const translations: Record<Locale, Record<string, string>> = {
     'version.deleteLast': 'No se puede eliminar la única versión de este calendario.',
     'ev.version.rename': 'Renombró la versión {{version}}',
     'ev.version.delete': 'Eliminó la versión {{version}} y todo su contenido',
+    'zoom.label': 'Tamaño de la interfaz',
+    'zoom.in': 'Agrandar',
+    'zoom.out': 'Reducir',
+    'zoom.reset': 'Volver al 100 %',
+    'zoom.limit': 'Es el máximo que cabe en esta pantalla sin recortar nada',
   },
 
   en: {
@@ -477,6 +482,11 @@ export const translations: Record<Locale, Record<string, string>> = {
     'version.deleteLast': 'You cannot delete the only version of this calendar.',
     'ev.version.rename': 'Renamed version {{version}}',
     'ev.version.delete': 'Deleted version {{version}} and all its content',
+    'zoom.label': 'Interface size',
+    'zoom.in': 'Zoom in',
+    'zoom.out': 'Zoom out',
+    'zoom.reset': 'Back to 100%',
+    'zoom.limit': 'This is as large as it fits on this screen without cutting anything off',
   },
 
   pt: {
@@ -710,5 +720,10 @@ export const translations: Record<Locale, Record<string, string>> = {
     'version.deleteLast': 'Não é possível excluir a única versão deste calendário.',
     'ev.version.rename': 'Renomeou a versão {{version}}',
     'ev.version.delete': 'Excluiu a versão {{version}} e todo o seu conteúdo',
+    'zoom.label': 'Tamanho da interface',
+    'zoom.in': 'Aumentar',
+    'zoom.out': 'Reduzir',
+    'zoom.reset': 'Voltar para 100%',
+    'zoom.limit': 'É o máximo que cabe nesta tela sem cortar nada',
   },
 }

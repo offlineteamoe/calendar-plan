@@ -159,6 +159,32 @@ no hay nada que avisar, nada que invalidar y nada que sondear. Es la razón por
 la que se eligió Firestore en primer lugar, y no se estaba aprovechando.
 
 
+## El zoom escala el lienzo, no el contenido
+
+El zoom del navegador agranda el contenido pero **no reduce el área de
+maquetación**: en una pantalla diseñada para caber entera —el calendario, con
+sus semanas alineadas— aparece scroll en cuanto se sube un punto.
+
+La aplicación hace lo contrario: maqueta en un lienzo `1/k` más pequeño
+(`width`/`height` calculados) y lo escala por `k` con `transform`. Todo se ve
+más grande, las proporciones se conservan y la página sigue cabiendo. Se aplica
+a `<body>` y no a `#root` para que los modales —que se montan como hijos
+directos de `<body>`— se escalen igual que el resto.
+
+Consecuencia que hay que respetar al programar: **nada puede medirse contra el
+viewport**. Un `100dvh` dentro del lienzo escalado renderiza `k` veces la
+altura de la pantalla y produce justo el scroll que se quería evitar. Se usa
+`100%` del lienzo.
+
+El tope no es un número fijo porque depende del monitor: tras cada aumento se
+cuenta cuántos elementos están recortando contenido y, si aumentaron, se
+deshace el paso. Comparar contra la medición anterior —en vez de exigir cero
+recortes— es lo que permite convivir con los recortes intencionados, como el
+texto de una nota limitado a dos líneas.
+
+Se guarda en `localStorage`, no en la cuenta: el tamaño adecuado depende del
+monitor, no de la persona.
+
 ## Las versiones son por calendario, no por mes
 
 Al principio las versiones colgaban del mes: un solo juego A/B/C compartido

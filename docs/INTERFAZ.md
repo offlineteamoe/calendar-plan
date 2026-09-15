@@ -17,6 +17,26 @@ convenciones visuales que las mantienen coherentes.
 - **Los estados dicen algo del negocio**, no del sistema: *mes en curso*, no
   *activo*.
 
+## Tamaño de la interfaz (zoom)
+
+En el encabezado, un control `− 100% +` agranda o reduce **toda** la
+aplicación. El porcentaje es un botón: devuelve al 100 %.
+
+No es el zoom del navegador. El del navegador agranda el contenido pero no
+reduce el área de maquetación, así que en una pantalla pensada para caber
+entera aparece scroll de inmediato. Aquí la página se maqueta en un lienzo
+`1/k` más pequeño y se escala por `k`: todo se ve `k` veces más grande, las
+proporciones se conservan exactas y la pantalla sigue cabiendo.
+
+**El máximo lo decide la pantalla, no un número fijo.** Tras cada aumento se
+comprueba si algo empezó a recortarse; si es así, se deshace ese paso y el `+`
+queda deshabilitado explicando por qué. Al cambiar el tamaño de la ventana se
+vuelve a permitir subir.
+
+Se guarda **en el navegador**, no en la cuenta: el tamaño que va bien en un
+portátil de 13" no es el que va bien en un monitor de 27", así que abrir la
+herramienta en otro equipo empieza al 100 %.
+
 ## Idiomas y tema
 
 Tres idiomas — **español, inglés y portugués** — conmutables desde el

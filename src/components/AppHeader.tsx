@@ -4,6 +4,7 @@ import { Logo } from './Logo'
 import { HistoryMenu } from './HistoryMenu'
 import { PresenceCell } from './PresenceCell'
 import { NotificationBell } from './NotificationBell'
+import { ZoomControl } from './ZoomControl'
 import { useI18n } from '../i18n/I18nContext'
 import { useRole } from '../hooks/useRole'
 import { useActivityFeed } from '../hooks/useActivityFeed'
@@ -97,6 +98,7 @@ export function AppHeader({ start, presenceUsers, monthKey = null, myChanges, on
       <div className="header-right" ref={rootRef}>
         {isViewer && <span className="role-badge" title={t('role.readOnly')}>{t('role.badge')}</span>}
         {presenceUsers && <PresenceCell users={presenceUsers} />}
+        <ZoomControl />
         {canEdit && <NotificationBell changes={activity} myEmail={user?.email ?? ''} />}
 
         {undoRedo && (
