@@ -32,7 +32,7 @@ https://raw.githubusercontent.com/offlineteamoe/calendar-plan/main/firestore.rul
 **3.** Abre el editor de reglas:
 
 ```
-https://console.firebase.google.com/project/offline-planning/firestore/rules
+https://console.firebase.google.com/project/offline-planning/firestore/databases/-default-/security/rules
 ```
 
 **4.** Clic dentro del editor, `Ctrl + A`, `Ctrl + V`.
@@ -58,7 +58,7 @@ consecuencias.
 
 Solo necesitas tocar ese documento para **añadir un cuarto administrador**:
 
-**Ir a:** https://console.firebase.google.com/project/offline-planning/firestore/data
+**Ir a:** https://console.firebase.google.com/project/offline-planning/firestore/databases/-default-/data
 
 Abre `config` → `roles` → añade el correo al array `admins`.
 

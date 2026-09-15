@@ -11,8 +11,8 @@ Todo lo que hace falta para desplegar, configurar y mantener la herramienta.
 | Aplicación publicada | https://offlineteamoe.github.io/calendar-plan/ |
 | Repositorio | https://github.com/offlineteamoe/calendar-plan (rama `main`) |
 | Consola de Firebase | https://console.firebase.google.com/project/offline-planning |
-| Base de datos | https://console.firebase.google.com/project/offline-planning/firestore/data |
-| Reglas de seguridad | https://console.firebase.google.com/project/offline-planning/firestore/rules |
+| Base de datos | https://console.firebase.google.com/project/offline-planning/firestore/databases/-default-/data |
+| Reglas de seguridad | https://console.firebase.google.com/project/offline-planning/firestore/databases/-default-/security/rules |
 | Acceso (proveedores) | https://console.firebase.google.com/project/offline-planning/authentication/providers |
 | Miembros del proyecto | https://console.firebase.google.com/project/offline-planning/settings/iam |
 | Despliegues | https://github.com/offlineteamoe/calendar-plan/actions |
