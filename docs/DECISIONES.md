@@ -183,7 +183,13 @@ recortes— es lo que permite convivir con los recortes intencionados, como el
 texto de una nota limitado a dos líneas.
 
 Se guarda en `localStorage`, no en la cuenta: el tamaño adecuado depende del
-monitor, no de la persona.
+monitor, no de la persona. Y **un nivel por tipo de pantalla**, no uno global:
+el calendario y la lista de meses no piden lo mismo. Se agrupa por tipo y no
+por URL para que todos los meses compartan ajuste.
+
+Por eso `ZoomProvider` vive dentro del router y del proveedor de sesión:
+necesita saber en qué pantalla está, y que sin sesión iniciada la pantalla es
+siempre la de acceso, sea cual sea la ruta.
 
 ## Las versiones son por calendario, no por mes
 

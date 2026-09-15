@@ -24,17 +24,17 @@ const queryClient = new QueryClient({
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <ThemeProvider>
-      <ZoomProvider>
       <I18nProvider>
         <QueryClientProvider client={queryClient}>
           <AuthProvider>
             <HashRouter>
-              <App />
+              <ZoomProvider>
+                <App />
+              </ZoomProvider>
             </HashRouter>
           </AuthProvider>
         </QueryClientProvider>
       </I18nProvider>
-      </ZoomProvider>
     </ThemeProvider>
   </StrictMode>,
 )

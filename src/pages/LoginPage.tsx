@@ -3,6 +3,7 @@ import { getAllowedDomain } from '../lib/firebaseClient'
 import { missingConfigKeys } from '../config'
 import { AnimatedBackground } from '../components/AnimatedBackground'
 import { LogoMark } from '../components/Logo'
+import { ZoomControl } from '../components/ZoomControl'
 import { useI18n } from '../i18n/I18nContext'
 import { useTheme } from '../context/ThemeContext'
 import { LOCALES } from '../i18n/translations'
@@ -20,6 +21,7 @@ export function LoginPage() {
       <AnimatedBackground />
 
       <div className="login-header">
+        <ZoomControl />
         {LOCALES.map((l) => (
           <button
             key={l.code}

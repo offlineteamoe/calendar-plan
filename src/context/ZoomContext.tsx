@@ -1,4 +1,4 @@
-// Zoom propio de la aplicación.
+// Zoom propio de la aplicación, con un nivel guardado POR PANTALLA.
 //
 // Por qué no basta con el zoom del navegador: el del navegador agranda el
 // contenido pero NO reduce el área de maquetación, así que en una pantalla
@@ -6,6 +6,11 @@
 // se hace al revés: se maqueta en un lienzo 1/k más pequeño y se escala por k.
 // Todo se ve k veces más grande, las proporciones se mantienen exactas, y la
 // pantalla sigue cabiendo sin scroll.
+//
+// Cada pantalla recuerda el suyo porque no piden lo mismo: el calendario se
+// mira de lejos y agradece tamaño, la lista de meses se lee de cerca. Se
+// agrupa por TIPO de pantalla, no por URL: todos los calendarios comparten
+// nivel, porque comparten maquetación.
 //
 // El tope no es un número fijo: depende del monitor. Tras cada aumento se
 // comprueba si algo empezó a recortarse y, si es así, se deshace el paso y se
@@ -16,12 +21,25 @@
 // portátil de 13" no es el que va bien en un monitor de 27", así que abrir la
 // herramienta en otro equipo debe empezar de cero.
 
-import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from 'react'
+import { useLocation } from 'react-router-dom'
+import { useAuth } from './AuthContext'
 
 const STORAGE_KEY = 'ui-zoom'
 const STEP = 0.05
 const MIN = 0.7
 const MAX = 1.8
+
+type Levels = Record<string, number>
 
 interface ZoomContextValue {
   zoom: number
@@ -40,14 +58,39 @@ function round(value: number): number {
   return Math.round(value * 100) / 100
 }
 
-function readStored(): number {
+function clamp(value: number): number {
+  return Math.min(MAX, Math.max(MIN, round(value)))
+}
+
+/** Tipo de pantalla, no URL: todos los calendarios comparten nivel. */
+function pageKeyOf(pathname: string, signedIn: boolean): string {
+  if (!signedIn) return 'login'
+  if (pathname.startsWith('/calendar')) return 'calendar'
+  if (pathname.startsWith('/logs')) return 'logs'
+  return 'months'
+}
+
+function readStored(): Levels {
   try {
-    const raw = Number(localStorage.getItem(STORAGE_KEY))
-    if (!raw || Number.isNaN(raw)) return 1
-    return Math.min(MAX, Math.max(MIN, round(raw)))
+    const raw = localStorage.getItem(STORAGE_KEY)
+    if (!raw) return {}
+    // Versión anterior: un único número para toda la aplicación. Se respeta
+    // como punto de partida de todas las pantallas.
+    const asNumber = Number(raw)
+    if (!Number.isNaN(asNumber) && asNumber > 0) {
+      const value = clamp(asNumber)
+      return { login: value, months: value, calendar: value, logs: value }
+    }
+    const parsed = JSON.parse(raw) as Levels
+    const out: Levels = {}
+    for (const [key, value] of Object.entries(parsed)) {
+      if (typeof value === 'number' && !Number.isNaN(value)) out[key] = clamp(value)
+    }
+    return out
   } catch {
-    // Modo incógnito o almacenamiento bloqueado: se arranca al 100 %.
-    return 1
+    // Modo incógnito, almacenamiento bloqueado o dato corrupto: se arranca
+    // al 100 % en todas las pantallas.
+    return {}
   }
 }
 
@@ -70,7 +113,7 @@ function countClipped(): number {
     const overflowsX = el.scrollWidth - el.clientWidth > 2
     if (!overflowsY && !overflowsX) continue
     const { overflowY, overflowX } = getComputedStyle(el)
-    // Las zonas con scroll propio (listas de meses, registro, panel de
+    // Las zonas con scroll propio (lista de meses, registro, panel de
     // actividad) están diseñadas para desbordarse: no cuentan.
     const clipsY = overflowY === 'hidden' || overflowY === 'clip'
     const clipsX = overflowX === 'hidden' || overflowX === 'clip'
@@ -80,53 +123,78 @@ function countClipped(): number {
 }
 
 export function ZoomProvider({ children }: { children: ReactNode }) {
-  const [zoom, setZoom] = useState<number>(readStored)
+  const { pathname } = useLocation()
+  const { status } = useAuth()
+  const pageKey = pageKeyOf(pathname, status === 'signed-in')
+
+  const [levels, setLevels] = useState<Levels>(readStored)
   const [atScreenLimit, setAtScreenLimit] = useState(false)
+
+  const zoom = levels[pageKey] ?? 1
+
+  // El nivel vigente, legible de forma síncrona. Sin esto, dos clics seguidos
+  // antes de que React redibuje leen el mismo valor y el segundo no avanza.
+  const zoomRef = useRef(zoom)
+  zoomRef.current = zoom
 
   useEffect(() => {
     apply(zoom)
+  }, [zoom])
+
+  useEffect(() => {
     try {
-      localStorage.setItem(STORAGE_KEY, String(zoom))
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(levels))
     } catch {
       // Si no se puede guardar, el zoom sigue funcionando en esta sesión.
     }
-  }, [zoom])
+  }, [levels])
 
-  // Otra ventana puede dar más sitio: se vuelve a permitir subir.
+  // Cambiar de pantalla o de tamaño de ventana da otro margen: se vuelve a
+  // permitir subir.
+  useEffect(() => setAtScreenLimit(false), [pageKey])
   useEffect(() => {
     const onResize = () => setAtScreenLimit(false)
     window.addEventListener('resize', onResize)
     return () => window.removeEventListener('resize', onResize)
   }, [])
 
-  const zoomIn = useCallback(() => {
-    setZoom((current) => {
-      const next = round(Math.min(MAX, current + STEP))
-      if (next === current) return current
+  const setFor = useCallback(
+    (key: string, value: number) => setLevels((prev) => ({ ...prev, [key]: value })),
+    [],
+  )
 
-      const before = countClipped()
-      apply(next)
-      // Se mide en el siguiente fotograma, ya con la nueva maquetación.
-      requestAnimationFrame(() => {
-        if (countClipped() > before) {
-          apply(current)
-          setZoom(current)
-          setAtScreenLimit(true)
-        }
-      })
-      return next
+  const zoomIn = useCallback(() => {
+    const current = zoomRef.current
+    const next = clamp(current + STEP)
+    if (next === current) return
+
+    const before = countClipped()
+    apply(next)
+    zoomRef.current = next
+    setFor(pageKey, next)
+    // Se mide en el siguiente fotograma, ya con la nueva maquetación.
+    requestAnimationFrame(() => {
+      if (countClipped() > before) {
+        apply(current)
+        zoomRef.current = current
+        setFor(pageKey, current)
+        setAtScreenLimit(true)
+      }
     })
-  }, [])
+  }, [pageKey, setFor])
 
   const zoomOut = useCallback(() => {
     setAtScreenLimit(false)
-    setZoom((current) => round(Math.max(MIN, current - STEP)))
-  }, [])
+    const next = clamp(zoomRef.current - STEP)
+    zoomRef.current = next
+    setFor(pageKey, next)
+  }, [pageKey, setFor])
 
   const reset = useCallback(() => {
     setAtScreenLimit(false)
-    setZoom(1)
-  }, [])
+    zoomRef.current = 1
+    setFor(pageKey, 1)
+  }, [pageKey, setFor])
 
   const value = useMemo<ZoomContextValue>(
     () => ({

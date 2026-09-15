@@ -33,6 +33,13 @@ comprueba si algo empezó a recortarse; si es así, se deshace ese paso y el `+`
 queda deshabilitado explicando por qué. Al cambiar el tamaño de la ventana se
 vuelve a permitir subir.
 
+**Cada pantalla recuerda el suyo.** El calendario se mira de lejos y agradece
+tamaño; la lista de meses se lee de cerca. Se agrupa por tipo de pantalla
+—acceso, meses, calendario, registro— no por URL: todos los calendarios
+comparten nivel porque comparten maquetación.
+
+El control está en **todas** las pantallas, incluida la de acceso.
+
 Se guarda **en el navegador**, no en la cuenta: el tamaño que va bien en un
 portátil de 13" no es el que va bien en un monitor de 27", así que abrir la
 herramienta en otro equipo empieza al 100 %.
