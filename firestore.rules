@@ -26,10 +26,14 @@ service cloud.firestore {
         && request.auth.token.email.matches('.*@([a-zA-Z0-9-]+[.])*openenglish[.]com$');
     }
 
-    // Lista de arranque, duplicada en src/lib/roles.ts a propósito: si el
-    // documento config/roles se borra o queda vacío, estas cuentas siguen
-    // pudiendo administrar y arreglarlo. Es la única duplicación, y es la que
-    // impide quedarse sin ningún administrador.
+    // Lista de arranque. Vive SOLO aquí, y es deliberado: este archivo se
+    // evalúa en el servidor y nunca se descarga al navegador, mientras que el
+    // JavaScript de la aplicación lo puede leer cualquiera. Tener estos
+    // correos en el código era publicar en internet a qué cuentas atacar.
+    //
+    // Es también la red de seguridad: si config/roles se borra o queda vacío,
+    // estas cuentas siguen pudiendo administrar y arreglarlo — la aplicación
+    // las vuelve a registrar solas la próxima vez que entren.
     function isBootstrapAdmin() {
       return isOeUser() && email() in [
         'william.fonseca@openenglish.com',
