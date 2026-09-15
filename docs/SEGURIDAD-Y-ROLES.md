@@ -46,20 +46,24 @@ Acepta `openenglish.com` **y sus subdominios** — hay cuentas en
 
 ### Quién es administrador
 
-Dos fuentes, en este orden:
+**El documento `config/roles`** en Firestore, con un campo `admins` (array de
+correos). Es la lista viva: cambiarla no requiere volver a desplegar.
 
-1. **Lista de arranque**, escrita en `firestore.rules` y en
-   `src/lib/roles.ts` (`BOOTSTRAP_ADMINS`):
-   - `william.fonseca@openenglish.com`
-   - `cesar.hernandez@openenglish.com`
-   - `dolores.yanes@business.openenglish.com`
-2. **Documento `config/roles`** en Firestore, con un campo `admins` (array de
-   correos). Es la lista viva: cambiarla **no requiere volver a desplegar**.
+La lista de arranque —las tres cuentas fundadoras— existe **solo en
+`firestore.rules`**, que vive en Firebase y nunca se descarga al navegador. No
+está en el código por una razón concreta: el JavaScript que sirve GitHub Pages
+lo puede leer cualquiera, y tener ahí los correos del equipo era publicar en
+internet a qué tres cuentas atacar.
 
-La duplicación es deliberada. Si alguien borra o vacía `config/roles`, esas
-tres cuentas siguen pudiendo administrar y arreglarlo. Sin ese respaldo, un
-error de edición dejaría la herramienta sin ningún administrador y sin forma de
-recuperarla desde la propia aplicación.
+**Arranque en frío, sin pasos manuales.** Si `config/roles` no existe o no
+incluye a quien entra, la aplicación intenta añadirlo. Las reglas solo lo
+permiten a las cuentas de arranque, así que el sistema se configura solo la
+primera vez que entra cada administrador, y para el resto del equipo el intento
+se rechaza sin consecuencias.
+
+Si alguien borrase `config/roles`, las tres cuentas de arranque volverían a
+registrarse solas al entrar. El respaldo sigue existiendo; ahora vive donde no
+se puede leer desde fuera.
 
 ### Matriz de permisos
 
@@ -111,18 +115,24 @@ serviría para nada.
 
 ## La contraseña de borrado
 
-`open@2027#`, definida una sola vez en
-`src/components/PasswordConfirmModal.tsx`.
+Vive en el documento **`config/secrets`** de Firestore, que las reglas solo
+dejan leer a los administradores. **No está en el código**: antes era una
+constante, lo que significaba que viajaba dentro del JavaScript y cualquiera en
+internet podía leerla.
 
-**No es una credencial de cuenta ni sustituye a las reglas.** Es fricción
-deliberada para que borrar algo grande no sea nunca un clic accidental. Se pide
-para:
+La primera vez que un administrador intenta borrar algo y no hay contraseña
+configurada, el propio modal le deja definirla. No hace falta ir a la consola
+de Firebase a crear el documento a mano.
 
-- eliminar un mes (y todo su contenido),
-- eliminar una versión (y todo el contenido de ese calendario).
+**Sigue sin ser una credencial de acceso ni sustituye a las reglas.** Lo que
+impide borrar es el rol, impuesto por el servidor. Esto es fricción deliberada
+para que borrar algo grande no sea nunca un clic accidental — pero ahora la
+fricción es real para todos, no solo para quien no sepa abrir el código.
 
-Está en un único componente compartido a propósito: repetirla en cada pantalla
-de borrado era la forma segura de que un día dejaran de coincidir.
+Se pide para eliminar un mes, eliminar una versión, y los borrados masivos de
+notas. Está en un único componente compartido a propósito: repetir la
+comprobación en cada pantalla era la forma segura de que un día dejaran de
+coincidir.
 
 ## Qué NO protege este sistema
 
@@ -138,6 +148,13 @@ Conviene ser explícito:
   descarga el navegador; siempre fue así y está diseñada para eso. Lo que
   protege los datos son las reglas y la lista de dominios autorizados, no
   esconder una clave de API.
+- **Todo el JavaScript es legible.** Minificar u ofuscar no es seguridad. Por
+  eso el código no contiene ningún dato: solo la forma de pedirlo. Quien lo
+  descargue sin sesión encuentra nombres de colecciones y textos de interfaz,
+  y nada más.
+- **No se puede impedir que alguien vea lo que su propia sesión descarga.** Si
+  una persona puede ver las notas en pantalla, puede verlas en las herramientas
+  de desarrollo. La protección es por identidad, nunca por pantalla.
 
 ## Publicar cambios en las reglas
 

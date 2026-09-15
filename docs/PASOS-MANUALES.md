@@ -9,8 +9,9 @@ Datos que vas a necesitar:
 - **Repositorio:** `offlineteamoe/calendar-plan`
 - **Sitio publicado:** https://offlineteamoe.github.io/calendar-plan/
 
-Estado actual: el **paso 1 está hecho** (las reglas están publicadas). Los
-demás son opcionales o de mantenimiento.
+> ⚠️ **Hay que republicar las reglas (paso 1).** La contraseña de borrado y la
+> lista de administradores salieron del código y viven ahora en Firestore, y
+> eso necesita reglas nuevas. Sin republicar, borrar cualquier cosa dará error.
 
 ---
 
@@ -48,25 +49,28 @@ botón "+ Nuevo mes", y las casillas de inversión deben mostrarse como texto.
 
 ---
 
-## Paso 2 — Lista de administradores *(opcional)*
+## Paso 2 — Lista de administradores *(ya no hace falta)*
 
-Los tres administradores ya están escritos en las reglas y en el código, así
-que la herramienta funciona sin esto. Este documento sirve para **añadir o
-quitar administradores en el futuro sin volver a desplegar**.
+**Se configura sola.** La primera vez que entra cada uno de ustedes tres, la
+aplicación se registra en `config/roles`. Las reglas solo se lo permiten a esas
+tres cuentas, así que para el resto del equipo el intento se rechaza sin
+consecuencias.
+
+Solo necesitas tocar ese documento para **añadir un cuarto administrador**:
 
 **Ir a:** https://console.firebase.google.com/project/offline-planning/firestore/data
 
-1. **Iniciar colección** → ID: `config` → **Siguiente**.
-2. ID del documento: escribe `roles` (no uses "ID automático").
-3. Campo `admins`, tipo `array`, con un elemento `string` por correo:
-   - `william.fonseca@openenglish.com`
-   - `cesar.hernandez@openenglish.com`
-   - `dolores.yanes@business.openenglish.com`
-4. **Guardar**.
+Abre `config` → `roles` → añade el correo al array `admins`.
 
-> Esas tres cuentas siguen siendo administradoras aunque este documento se
-> borre. Es a propósito: impide quedarse sin ningún administrador por un error
-> de edición.
+> Si alguien borrase el documento, ustedes tres volverían a registrarse solos
+> al entrar. El respaldo vive en las reglas, donde no se puede leer desde
+> fuera.
+
+## Paso 2b — La contraseña de borrado *(automático)*
+
+Tampoco requiere consola. La primera vez que un administrador intente eliminar
+algo, el propio modal le pedirá definirla. Queda guardada en `config/secrets`,
+que solo pueden leer los administradores.
 
 ---
 

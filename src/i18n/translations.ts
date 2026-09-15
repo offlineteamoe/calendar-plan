@@ -249,6 +249,13 @@ export const translations: Record<Locale, Record<string, string>> = {
     'zoom.out': 'Reducir',
     'zoom.reset': 'Volver al 100 %',
     'zoom.limit': 'Es el máximo que cabe en esta pantalla sin recortar nada',
+    'password.setupTitle': 'Definir la contraseña de borrado',
+    'password.setupBody': 'Todavía no hay contraseña configurada. Define una ahora: se pedirá cada vez que alguien elimine un mes, una versión o un bloque de notas. La conocen los administradores; no es una credencial de acceso.',
+    'password.newLabel': 'Contraseña nueva',
+    'password.repeatLabel': 'Repítela',
+    'password.tooShort': 'Usa al menos 6 caracteres.',
+    'password.mismatch': 'Las dos no coinciden.',
+    'password.setupBtn': 'Guardar contraseña',
   },
 
   en: {
@@ -487,6 +494,13 @@ export const translations: Record<Locale, Record<string, string>> = {
     'zoom.out': 'Zoom out',
     'zoom.reset': 'Back to 100%',
     'zoom.limit': 'This is as large as it fits on this screen without cutting anything off',
+    'password.setupTitle': 'Set the deletion password',
+    'password.setupBody': 'No password has been set yet. Define one now: it will be asked every time someone deletes a month, a version or a block of notes. Admins know it; it is not an access credential.',
+    'password.newLabel': 'New password',
+    'password.repeatLabel': 'Repeat it',
+    'password.tooShort': 'Use at least 6 characters.',
+    'password.mismatch': 'The two do not match.',
+    'password.setupBtn': 'Save password',
   },
 
   pt: {
@@ -725,5 +739,12 @@ export const translations: Record<Locale, Record<string, string>> = {
     'zoom.out': 'Reduzir',
     'zoom.reset': 'Voltar para 100%',
     'zoom.limit': 'É o máximo que cabe nesta tela sem cortar nada',
+    'password.setupTitle': 'Definir a senha de exclusão',
+    'password.setupBody': 'Ainda não há senha configurada. Defina uma agora: será pedida sempre que alguém excluir um mês, uma versão ou um bloco de notas. Os administradores a conhecem; não é uma credencial de acesso.',
+    'password.newLabel': 'Nova senha',
+    'password.repeatLabel': 'Repita',
+    'password.tooShort': 'Use pelo menos 6 caracteres.',
+    'password.mismatch': 'As duas não coincidem.',
+    'password.setupBtn': 'Salvar senha',
   },
 }

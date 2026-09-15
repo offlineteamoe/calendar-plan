@@ -50,8 +50,21 @@ service cloud.firestore {
 
     // La lista de administradores: la lee cualquiera del dominio (la interfaz
     // necesita saber qué mostrar), la cambia solo un administrador de arranque.
+    //
+    // Esa escritura es además el arranque en frío del sistema: la aplicación
+    // intenta añadir a quien entra, y solo prospera si es una de las cuentas
+    // de aquí arriba. Para el resto del equipo el intento se rechaza y no
+    // pasa nada.
     match /config/roles {
       allow read: if isOeUser();
+      allow write: if isBootstrapAdmin();
+    }
+
+    // La contraseña de borrado. Vive aquí y no en el código porque el
+    // JavaScript que sirve GitHub Pages lo puede descargar cualquiera. Solo
+    // la leen los administradores, que son los únicos que pueden borrar algo.
+    match /config/secrets {
+      allow read: if isAdmin();
       allow write: if isBootstrapAdmin();
     }
 
