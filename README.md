@@ -23,6 +23,7 @@ es el índice.
 | [VISION-Y-ALCANCE](docs/VISION-Y-ALCANCE.md) | Qué problema resuelve y para quién |
 | [ARQUITECTURA](docs/ARQUITECTURA.md) | Cómo está construido |
 | [DATA-MODEL](docs/DATA-MODEL.md) | Dónde vive cada dato |
+| [DATOS-DE-RESULTADOS](docs/DATOS-DE-RESULTADOS.md) | Las cifras reales de la pestaña Resultados |
 | [SEGURIDAD-Y-ROLES](docs/SEGURIDAD-Y-ROLES.md) | Quién puede hacer qué |
 | [INTERFAZ](docs/INTERFAZ.md) | Qué ve y hace cada persona |
 | [OPERACION](docs/OPERACION.md) | Rutas, cuentas, despliegue, cuotas |

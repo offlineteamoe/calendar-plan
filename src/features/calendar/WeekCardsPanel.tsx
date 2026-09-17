@@ -17,10 +17,16 @@ interface Props {
   kind: typeof COLLECTIONS.results | typeof COLLECTIONS.creative
   placeholder: string
   title: string
+  /**
+   * Resultados ya pone su propia banda de subpestañas arriba. Dos bandas
+   * seguidas desplazarían las semanas de este lado y dejarían de coincidir con
+   * las del calendario, que es justo lo que WeekGrid existe para evitar.
+   */
+  withHeader?: boolean
 }
 
 /** Resultados / creativos: un cuadro por semana, alineado con el calendario. */
-export function WeekCardsPanel({ monthKey, scope, version, weeks, kind, placeholder, title }: Props) {
+export function WeekCardsPanel({ monthKey, scope, version, weeks, kind, placeholder, title, withHeader = true }: Props) {
   const { user } = useAuth()
   const { canEdit } = useRole()
   const { t } = useI18n()
@@ -54,10 +60,12 @@ export function WeekCardsPanel({ monthKey, scope, version, weeks, kind, placehol
 
   return (
     <>
-      <div className="aligned-subhead">
-        <span className="week-col-title">{title}</span>
-        {saveMutation.isPending && <span className="muted small">{t('common.saving')}</span>}
-      </div>
+      {withHeader && (
+        <div className="aligned-subhead">
+          <span className="week-col-title">{title}</span>
+          {saveMutation.isPending && <span className="muted small">{t('common.saving')}</span>}
+        </div>
+      )}
 
       {cardsQuery.error && (
         <p className="error-text" style={{ padding: '8px 12px' }}>

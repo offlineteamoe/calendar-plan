@@ -22,3 +22,9 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Datos reales de resultados: el repositorio es publico y estas cifras no.
+# El ETL escribe en la carpeta compartida de Drive, nunca aqui, pero un
+# "--out ." accidental no puede acabar en un commit.
+calendar-results.json
+etl/*.json

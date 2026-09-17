@@ -309,3 +309,57 @@ La purga a los 30 días ocurre al abrir la papelera. No hay servidor que pueda
 hacerlo en segundo plano, y colgarlo de una acción que ya es de
 administradores evita inventar un mecanismo entero para algo que no corre
 prisa.
+
+---
+
+## Los resultados se leen de Drive, no de Firestore
+
+Las cifras reales de Spotfire son cientos de miles de filas que se regeneran
+cada día. Copiarlas a Firestore habría gastado el cupo diario entero sin ganar
+nada: no se editan desde la aplicación, solo se leen.
+
+Viven como un JSON en la carpeta compartida de Drive donde el equipo ya deja
+sus datos procesados, y el navegador lo lee con la sesión de Google de quien
+entra. El control de acceso es el permiso de la carpeta, que es el mismo que ya
+gobierna esos datos para todo lo demás.
+
+### Por qué hay un paso de ETL en medio
+
+El origen son ocho archivos que suman ~77 MB. `etl/build_calendar_results.py`
+los reduce a uno de ~225 KB quedándose con un solo channel grouping, ocho
+cifras por día y los cuatro territorios del calendario. Son 340 veces menos.
+
+**Un solo archivo, no uno por mes.** Trocearlo por mes multiplicaría las
+llamadas a Drive (cada archivo son dos: buscarlo y bajarlo) para ahorrar unos
+kilobytes, y además obligaría a acertar de antemano qué meses hacen falta —
+justo lo que no se puede garantizar cuando alguien cambia de mes o de
+comparación. Con el archivo entero, cualquier ventana que se pida ya está.
+
+### Por qué no se guardan las razones ya calculadas
+
+Solo se guardan cifras sumables. CPL, conversión, %MNCC y Full CM % Short se
+calculan en la web sobre el total del rango filtrado. Guardarlas por día y
+promediarlas daría otro número, y equivocado: el promedio de unas razones no es
+la razón del total.
+
+### Frescura: se pregunta la fecha, no se descarga el archivo
+
+Al abrir un calendario se le pide a Drive una sola cosa —cuándo cambió el
+archivo—, y solo se descarga si no coincide con la copia guardada en el
+navegador. Así el dato es siempre el último publicado sin depender de acertar
+cada cuánto conviene refrescar, y abrir el calendario veinte veces al día
+cuesta lo mismo que abrirlo una.
+
+### El día en curso no se lee, y las dos ventanas se recortan igual
+
+El tope es el menor entre el último día de los datos y ayer: el día en curso va
+a medias. De ahí sale un problema que no es obvio: si hoy es jueves, la semana
+actual tiene tres días cerrados, y compararla contra una semana entera haría
+que todo pareciera desplomarse cada lunes. Por eso la ventana de referencia se
+recorta a los mismos días de la semana que sobrevivan en la actual.
+
+### 364 días para el año anterior
+
+Un año natural corre los días de la semana y acabaría comparando un lunes con
+un domingo. Con 52 semanas exactas, lunes contra lunes — que es además lo que
+hace utilizable el filtro por día.

@@ -16,6 +16,7 @@ Depende de a qué vengas:
 | Entender qué es esto y para quién | [VISION-Y-ALCANCE.md](VISION-Y-ALCANCE.md) |
 | Entender cómo está construido | [ARQUITECTURA.md](ARQUITECTURA.md) |
 | Saber dónde se guarda cada dato | [DATA-MODEL.md](DATA-MODEL.md) |
+| Entender los resultados reales de la pestaña Resultados | [DATOS-DE-RESULTADOS.md](DATOS-DE-RESULTADOS.md) |
 | Saber quién puede hacer qué | [SEGURIDAD-Y-ROLES.md](SEGURIDAD-Y-ROLES.md) |
 | Entender las pantallas y su comportamiento | [INTERFAZ.md](INTERFAZ.md) |
 | Desplegar, configurar cuentas, revisar cuotas | [OPERACION.md](OPERACION.md) |
@@ -36,6 +37,7 @@ VISION-Y-ALCANCE   qué problema resuelve y para quién
         │
         ├── ARQUITECTURA        cómo está construido
         │        ├── DATA-MODEL        dónde vive cada dato
+        │        ├── DATOS-DE-RESULTADOS  de dónde salen las cifras de Spotfire
         │        ├── SEGURIDAD-Y-ROLES quién puede tocarlo
         │        └── INTERFAZ          qué ve y hace cada persona
         │

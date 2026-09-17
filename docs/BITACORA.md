@@ -278,3 +278,55 @@ se elegía tomando **el primer hueco libre**, así que en un calendario que
 hubiera quedado solo con B, la siguiente versión se habría llamado A y habría
 sobrescrito el contenido huérfano. Ahora las letras avanzan siempre hacia
 adelante.
+
+---
+
+## Pestaña Resultados con datos reales (17 sep 2026)
+
+Petición: la pestaña Resultados deja de ser un cuadro de texto y muestra las
+cifras de Spotfire por semana, según la marca y la región abiertas, con
+subpestañas WOW, YOY, 2025 WOW y Margen, y con la posibilidad de mirar solo
+ciertos días de la semana.
+
+**Las rutas no se escribieron en el código.** El equipo mantiene
+`Reglas y Rutas.xlsx` justamente porque las carpetas cambian de sitio; el ETL
+lee la ruta de ahí.
+
+### Lo que se descartó
+
+- **Leer los decks directamente desde el navegador.** `OE-LATAM.json` pesa
+  30 MB y los ocho suman 77 MB. Cambiar de marca habría costado otra descarga
+  igual.
+- **Guardar los resultados en Firestore.** Decisión ya tomada antes por el
+  cupo, y aquí se confirma: son datos de solo lectura que se regeneran a
+  diario.
+
+### Errores encontrados al construirlo
+
+- **La rejilla de métricas rompía la alineación con el calendario.** Las
+  subpestañas y el filtro de días se habían puesto como dos bandas nuevas
+  encima de las semanas, lo que empujaba hacia abajo todo el panel derecho:
+  las semanas dejaban de coincidir con las del calendario de la izquierda, que
+  es justo lo que `WeekGrid` existe para garantizar. Se metieron dentro de las
+  dos bandas que ya existían (subencabezado y encabezado de semanas).
+- **La etiqueta de cada métrica se recortaba.** La celda tenía tres líneas
+  (etiqueta, valor, variación) y en una ventana baja `overflow:hidden` se comía
+  la primera — la única que dice qué se está mirando. Ahora son dos: etiqueta
+  arriba, valor y variación en la misma línea.
+- **La comparación de la semana en curso era tramposa.** Tres días cerrados
+  contra siete hacía que todo apareciera desplomándose. Ahora las dos ventanas
+  se recortan igual y la semana avisa de que es parcial.
+
+### Comprobación
+
+La lógica que va a la web (`src/lib/results.ts`) se corrió en Node contra el
+archivo real y se comparó, cifra por cifra, con un recálculo independiente
+hecho en Python directamente sobre los decks crudos: coinciden en los siete
+calendarios probados. Las tres ventanas de comparación caen siempre en lunes.
+
+### Limitación del origen, no del cálculo
+
+A 17-sep-2026 el gasto de medios de LatAm y México venía en cero desde el día
+14 aunque sí hubiera leads, mientras que Brasil sí lo traía hasta el 16. En los
+días más recientes de esos mercados el CPL sale artificialmente bajo y el %MNCC
+artificialmente alto. Es lo que entrega la fuente.

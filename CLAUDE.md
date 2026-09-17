@@ -22,6 +22,8 @@ resolviendo mal para esta arquitectura.
 Documentación completa en `docs/` — empieza por `docs/README.md`, que es el
 índice. Antes de tocar datos o de pedirle pasos al usuario, lee al menos:
 - `docs/DATA-MODEL.md` — el esquema de Firestore, campo por campo.
+- `docs/DATOS-DE-RESULTADOS.md` — de dónde salen las cifras de la pestaña
+  Resultados, cómo se calcula cada métrica y contra qué se compara.
 - `docs/SEGURIDAD-Y-ROLES.md` — quién puede hacer qué, y dónde se impone.
 - `docs/PASOS-MANUALES.md` — lo que solo puede hacer el usuario en las
   consolas de Google/GitHub, con links exactos.

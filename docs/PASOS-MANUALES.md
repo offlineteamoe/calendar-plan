@@ -136,7 +136,51 @@ Estado actual: `am@openenglish.com`, `william.fonseca@openenglish.com` y
 
 ---
 
-## Paso 5 — Si el registro de actividad pide un índice
+## Paso 5 — Autorizar el sitio para leer Drive *(pestaña Resultados)*
+
+**Hace falta una sola vez.** Sin esto, la pestaña Resultados dirá que no puede
+conectar con Drive; el resto de la aplicación no se ve afectada.
+
+Los resultados reales viven en una carpeta compartida de Drive, no en Firestore
+(ver [`DATOS-DE-RESULTADOS.md`](DATOS-DE-RESULTADOS.md)). Para leerlos, el
+navegador pide un permiso a Google en nombre de quien entra, y Google solo
+entrega ese permiso a sitios declarados de antemano.
+
+**1.** Abre las credenciales del proyecto de Google Cloud donde vive el cliente
+de OAuth que usa el equipo:
+
+```
+https://console.cloud.google.com/apis/credentials
+```
+
+**2.** Entra en el cliente de tipo *ID de cliente de OAuth 2.0* que termina en
+`...dcs35ujfvbqg42lotiln2ndmouq53r9n`.
+
+**3.** En **Orígenes autorizados de JavaScript**, pulsa *Añadir URI* y pega:
+
+```
+https://offlineteamoe.github.io
+```
+
+Si vas a probar en tu equipo, añade también `http://localhost:5173`.
+
+**4.** **Guardar.** Google tarda unos minutos en propagarlo.
+
+> **Alternativa:** si prefieres no tocar ese cliente, crea uno nuevo en el
+> proyecto `offline-planning` (tipo *Aplicación web*, con esos mismos orígenes)
+> y pon su ID en la variable `VITE_GOOGLE_CLIENT_ID`. El código funciona igual
+> con cualquiera de los dos.
+
+**5.** La primera vez que alguien abra la pestaña Resultados, Google le pedirá
+permiso para leer Drive. Es una vez por persona.
+
+**6.** Esa persona necesita tener **compartida la carpeta** donde está
+`calendar-results.json`. Ese permiso de Drive es el control real: quien no lo
+tenga verá un error de acceso aunque haya iniciado sesión.
+
+---
+
+## Paso 6 — Si el registro de actividad pide un índice
 
 La pantalla `#/logs` es la **única** de toda la aplicación que puede pedir un
 índice de Firestore, porque lee los cambios de todos los meses de una vez.
@@ -165,3 +209,8 @@ El resto de la aplicación está escrito a propósito para no necesitar ningún
 | Perfil → Registro de actividad | Solo aparece si tu cuenta es administradora |
 | Escribir una nota en español y pasar a inglés | Con el paso 3 hecho, aparece traducida a los pocos segundos |
 | Dos personas en el mismo mes | Cada una ve el avatar de la otra |
+| Pestaña Resultados, subpestaña WOW | Cada semana muestra leads, Media Spend, CPL, conversión, %MNCC y Full CM % Short con su variación |
+| Apagar días en `L M M J V S D` | Las cifras cambian en **los dos** periodos comparados |
+| Semana en curso | Avisa "Semana parcial: N de 7 días cerrados" |
+| Semana futura del mes | Dice "Sin datos", no ceros |
+| Botón Actualizar | Vuelve a comprobar Drive; si no hay nada nuevo, no descarga nada |

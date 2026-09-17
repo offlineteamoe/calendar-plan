@@ -2111,3 +2111,194 @@
     radial-gradient(90% 55% at 50% 0%, var(--surface-3) 0%, transparent 60%),
     var(--bg);
 }
+
+/* ---------------------------------------------------------------------------
+   Resultados: subpestañas de comparación, filtro por día y rejilla de métricas
+
+   Los controles NO añaden bandas nuevas: las subpestañas viven dentro del
+   subencabezado y el filtro de días dentro del encabezado de semanas. Cualquier
+   banda extra bajaría las semanas de este lado y dejarían de coincidir con las
+   del calendario de la izquierda.
+   --------------------------------------------------------------------------- */
+
+.results-subhead {
+  gap: 6px;
+  padding: 0 10px;
+}
+.subtab-bar {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex: 1;
+  min-width: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.subtab-bar::-webkit-scrollbar {
+  display: none;
+}
+.subtab-bar button {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 3px 10px;
+  font-family: var(--font-display);
+  font-size: 10.5px;
+  font-weight: 700;
+  color: var(--ink-soft);
+  cursor: pointer;
+  white-space: nowrap;
+}
+.subtab-bar button:hover {
+  color: var(--ink);
+  border-color: var(--border-strong);
+}
+.subtab-bar button.is-active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+.result-refresh {
+  font-size: 11px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.result-weekhead {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.result-weekhead .week-col-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.result-days {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  flex-shrink: 0;
+}
+.result-day {
+  width: 18px;
+  height: 18px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--ink-faint);
+  font-size: 9.5px;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0;
+}
+.result-day.is-on {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: var(--surface);
+}
+
+.result-notice {
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 9px;
+  font-size: 12.5px;
+  color: var(--ink-soft);
+}
+
+/* Tres columnas por dos filas: es lo que cabe en la altura de una semana del
+   calendario sin que la fila de la derecha deje de coincidir con la izquierda. */
+.result-grid {
+  flex: 1;
+  min-width: 0;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-auto-rows: minmax(0, 1fr);
+  gap: 4px;
+}
+.result-cell {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 1px;
+  padding: 3px 7px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: var(--surface);
+  overflow: hidden;
+}
+.result-cell-label {
+  font-size: 8.5px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.result-cell-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 5px;
+  min-width: 0;
+}
+.result-cell-value {
+  font-family: var(--font-display);
+  font-size: 13.5px;
+  font-weight: 800;
+  color: var(--ink);
+  line-height: 1.15;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.result-cell-delta {
+  font-size: 9.5px;
+  font-weight: 700;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.result-cell-delta.is-up {
+  color: var(--ok);
+}
+.result-cell-delta.is-down {
+  color: var(--danger);
+}
+.result-cell-delta.is-flat,
+.result-cell-delta.is-neutral {
+  color: var(--ink-faint);
+}
+
+/* Ocupa la fila entera por encima de las celdas: advierte sobre todas ellas. */
+.result-partial {
+  grid-column: 1 / -1;
+  font-size: 8.5px;
+  font-weight: 700;
+  color: var(--warn);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.result-empty {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1.5px dashed var(--border);
+  border-radius: 10px;
+  background: var(--surface-2);
+  color: var(--ink-faint);
+  font-family: var(--font-display);
+  font-size: 11px;
+  font-weight: 700;
+}

@@ -4,6 +4,7 @@ import { useLiveDocs } from '../../hooks/useLiveDocs'
 import { NotesPanel } from '../notes/NotesPanel'
 import { ScenarioEditor } from './ScenarioEditor'
 import { WeekCardsPanel } from './WeekCardsPanel'
+import { ResultsPanel } from './ResultsPanel'
 import { CHANNELS, COLLECTIONS, COUNTRY_LABELS, LATAM_PARTS, type PlanRow, type VersionEntry } from '../../types'
 import { useI18n } from '../../i18n/I18nContext'
 import type { CalendarWeek } from '../../lib/dateUtils'
@@ -56,15 +57,7 @@ export function SidePanel({ monthKey, scope, version, weeks, latamView }: Props)
       {tab === 'notes' && <NotesPanel monthKey={monthKey} scope={scope} version={version} weeks={weeks} />}
 
       {tab === 'results' && (
-        <WeekCardsPanel
-          monthKey={monthKey}
-          scope={scope}
-          version={version}
-          weeks={weeks}
-          kind={COLLECTIONS.results}
-          title={t('tabs.results')}
-          placeholder={t('weekCards.resultsPh')}
-        />
+        <ResultsPanel monthKey={monthKey} scope={scope} version={version} weeks={weeks} latamView={latamView} />
       )}
 
       {tab === 'creative' && (

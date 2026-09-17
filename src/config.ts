@@ -44,6 +44,25 @@ export const config = {
    * Si falta, las notas simplemente no se traducen (ver lib/translate.ts).
    */
   translateApiKey: readEnv('VITE_GOOGLE_TRANSLATE_KEY'),
+
+  /**
+   * Lectura de los datos de resultados que viven en Drive (ver
+   * lib/googleDrive.ts y docs/DATOS-DE-RESULTADOS.md).
+   *
+   * Ni el client ID ni el id de la carpeta son secretos: el primero está
+   * pensado para vivir en el código de la página, y el segundo no da acceso a
+   * nada por sí solo — quien no tenga la carpeta compartida recibe un 403 del
+   * propio Drive. El permiso de la carpeta es el control real.
+   */
+  google: {
+    clientId:
+      readEnv('VITE_GOOGLE_CLIENT_ID') ||
+      '832432252141-dcs35ujfvbqg42lotiln2ndmouq53r9n.apps.googleusercontent.com',
+    /** Carpeta compartida donde el ETL deja los datos ya procesados. */
+    driveFolderId: readEnv('VITE_DRIVE_FOLDER_ID') || '1tF4sj9XWMJWDphx1nyodiDlqmnVYOMxr',
+    /** Archivo que genera `etl/build_calendar_results.py`. */
+    resultsFileName: readEnv('VITE_RESULTS_FILE') || 'calendar-results.json',
+  },
 } as const
 
 export function isConfigured(): boolean {
